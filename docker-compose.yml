@@ -1,0 +1,15 @@
+services:
+  homelab-commander:
+    build: .
+    container_name: homelab-commander
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:3000:3000"
+    volumes:
+      - homelab-data:/app/data
+    environment:
+      NODE_ENV: production
+      HOMELAB_DATABASE_PATH: /app/data/homelab.db
+
+volumes:
+  homelab-data:
