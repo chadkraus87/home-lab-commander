@@ -5,6 +5,7 @@
   "type": "module",
   "license": "MIT",
   "allowScripts": {
+    "fsevents": false,
     "unrs-resolver": false
   },
   "engines": {

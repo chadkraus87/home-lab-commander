@@ -43,7 +43,7 @@ The Docker provider runs only `docker info` and `docker ps -a` with fixed format
 
 The repository ignores `.env` files, database files, backup database files, private keys, and runtime artifacts. Portable export includes devices, services, inventory, notes, and non-secret settings; credential material is not part of the domain model. Structured logs contain event names, coarse counts, status, and error classes—not request bodies, tokens, note content, or inventories.
 
-npm install scripts fail closed unless explicitly reviewed. The only pending transitive script is denied because the application builds and tests without it. Container builds also disable framework telemetry.
+npm install scripts fail closed unless explicitly reviewed. The pending transitive development/optional scripts (`unrs-resolver` and macOS-only `fsevents`) are explicitly denied because the application builds and tests without them. Container builds also disable framework telemetry.
 
 SQLite online backups receive owner-only permissions and an integrity check. Automated retention deletes only files matching the application's exact backup filename pattern. The Docker backup process has no network access.
 
