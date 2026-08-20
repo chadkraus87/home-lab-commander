@@ -7,7 +7,7 @@
 A local-first operations console for discovering, monitoring, organizing, documenting, and troubleshooting a personally owned homelab.
 
 [![Live Demo](https://img.shields.io/badge/Live_Demo-Open-5aa7ff?style=for-the-badge&logo=vercel&logoColor=white)](https://home-lab-commander.vercel.app)
-[![CI](https://img.shields.io/github/actions/workflow/status/chadkraus87/home-lab-commander/ci.yml?branch=main&style=for-the-badge&label=CI)](https://github.com/chadkraus87/home-lab-commander/actions/workflows/ci.yml)
+[![CI](https://img.shields.io/badge/CI-GitHub_Actions-2088FF?style=for-the-badge&logo=githubactions&logoColor=white)](https://github.com/chadkraus87/home-lab-commander/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-56d39a?style=for-the-badge)](LICENSE)
 
 ![HomeLab Commander overview](docs/screenshots/overview.png)
