@@ -46,7 +46,7 @@ npm install
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000). The first request creates `data/homelab.db`, applies migrations, and seeds the Demo Environment.
+Open [http://127.0.0.1:3000](http://127.0.0.1:3000). The first request creates `data/homelab.db`, applies migrations, and seeds the Demo Environment.
 
 Both development and production scripts bind to `127.0.0.1` by default. Deliberately override the hostname only when you intend to expose the application to a trusted LAN.
 
