@@ -1,5 +1,6 @@
 import { discoveryInputSchema } from "@/domain/schemas";
 import { LocalDiscoveryProvider } from "@/server/discovery";
+import { hostedDemoMessage, isHostedDemo } from "@/server/deployment";
 import { assertSameOrigin } from "@/server/request-security";
 import { getStore } from "@/server/store";
 
@@ -11,6 +12,8 @@ let lastDiscoveryAt = 0;
 export async function POST(request: Request): Promise<Response> {
   try {
     assertSameOrigin(request);
+    if (isHostedDemo())
+      return Response.json({ error: hostedDemoMessage }, { status: 403 });
     const parsed = discoveryInputSchema.safeParse(await request.json());
     if (!parsed.success)
       return Response.json(

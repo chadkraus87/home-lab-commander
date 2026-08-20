@@ -49,6 +49,7 @@ export function readSnapshot(database: DatabaseSync): AppSnapshot {
     ),
   );
   return {
+    hostedDemo: false,
     devices,
     services: (
       database

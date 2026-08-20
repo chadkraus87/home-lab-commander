@@ -127,14 +127,18 @@ export function AppShell({ children }: { children: ReactNode }) {
           <span className="live-pulse" />
           <div>
             <strong>
-              {snapshot.settings.mode === "demo"
-                ? "Demo environment"
-                : "Live environment"}
+              {snapshot.hostedDemo
+                ? "Hosted showcase"
+                : snapshot.settings.mode === "demo"
+                  ? "Demo environment"
+                  : "Live environment"}
             </strong>
             <small>
-              {snapshot.settings.mode === "demo"
-                ? "Simulation running"
-                : "Local providers active"}
+              {snapshot.hostedDemo
+                ? "Demo-only · ephemeral"
+                : snapshot.settings.mode === "demo"
+                  ? "Simulation running"
+                  : "Local providers active"}
             </small>
           </div>
         </div>

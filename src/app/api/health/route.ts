@@ -9,7 +9,8 @@ export function GET(): Response {
     return Response.json({
       status: "healthy",
       mode: snapshot.settings.mode,
-      database: "ready",
+      deployment: snapshot.hostedDemo ? "hosted-demo" : "local",
+      database: snapshot.hostedDemo ? "ephemeral" : "ready",
       generatedAt: snapshot.generatedAt,
     });
   } catch {

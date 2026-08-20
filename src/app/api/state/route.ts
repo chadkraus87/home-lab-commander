@@ -3,6 +3,7 @@ import {
   assertSameOrigin,
   RequestSecurityError,
 } from "@/server/request-security";
+import { hostedDemoMessage, isHostedDemo } from "@/server/deployment";
 import { getStore, StoreError } from "@/server/store";
 
 export const runtime = "nodejs";
@@ -57,6 +58,8 @@ export async function POST(request: Request): Promise<Response> {
         snapshot = store.deleteNote(parsed.data.id);
         break;
       case "update-settings":
+        if (isHostedDemo() && parsed.data.data.mode === "live")
+          return Response.json({ error: hostedDemoMessage }, { status: 403 });
         snapshot = store.updateSettings(parsed.data.data);
         break;
       case "reset-demo":

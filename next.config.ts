@@ -7,6 +7,9 @@ const nextConfig: NextConfig = {
     ? ({ output: "standalone" } as const)
     : {}),
   poweredByHeader: false,
+  outputFileTracingIncludes: {
+    "/*": ["./migrations/**/*"],
+  },
   async headers() {
     return [
       {

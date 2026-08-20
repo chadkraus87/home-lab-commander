@@ -47,9 +47,22 @@ The repository ignores `.env` files, database files, private keys, and runtime a
 
 Mutation routes compare an incoming browser `Origin` to the request host. Responses include `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, and a restrictive Permissions Policy. Status is conveyed through text and icons in addition to color.
 
+## Public showcase boundary
+
+Vercel deployments fail closed into Hosted Demo, even if no custom environment variable is configured. The server:
+
+- forces snapshots to report Demo Mode;
+- uses only ephemeral SQLite storage in the runtime temporary directory;
+- rejects Live Mode activation;
+- rejects private-network discovery and diagnostics;
+- rejects portable imports;
+- never invokes the Docker provider.
+
+Demo mutations and exports remain available so visitors can explore the workflow. They contain only deterministic example data and can disappear on cold start or redeployment. A persistent public edition would require authenticated users, per-tenant authorization, durable managed storage, audit identity, and a separately authenticated local agent.
+
 ## Known boundary
 
-This release has no application-owned sign-in because it is designed for one local operator on loopback. Do not bind it to a public interface. Before exposing it on a shared LAN, place it behind authenticated TLS access and reassess CSRF, authorization, audit identity, and secret storage.
+This release has no application-owned sign-in because Live Mode is designed for one local operator on loopback. Do not expose a Live Mode process publicly. Before exposing it on a shared LAN, place it behind authenticated TLS access and reassess CSRF, authorization, audit identity, and secret storage. Only the constrained Hosted Demo profile is intended for a public URL.
 
 ## Reporting
 

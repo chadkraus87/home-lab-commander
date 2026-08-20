@@ -1,9 +1,16 @@
 import { DockerCliProvider } from "@/server/docker";
+import { hostedDemoMessage, isHostedDemo } from "@/server/deployment";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function GET(): Promise<Response> {
+  if (isHostedDemo())
+    return Response.json({
+      available: false,
+      containers: [],
+      message: hostedDemoMessage,
+    });
   const provider = new DockerCliProvider();
   const available = await provider.available();
   if (!available)

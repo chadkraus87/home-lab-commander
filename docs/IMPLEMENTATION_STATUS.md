@@ -10,6 +10,9 @@
 - Private-CIDR policy, approved-network enforcement, rate-limited discovery, Docker detection, structured logging
 - Unit, component, SQLite integration, and ten Playwright workflow tests
 - Docker packaging and operator/security documentation
+- Vercel Hosted Demo profile with ephemeral storage and server-enforced local-provider blocks
+- Public README launch page with reproducible animated and full-resolution product tours
+- GitHub Actions quality and browser workflows
 
 ## External limitations
 

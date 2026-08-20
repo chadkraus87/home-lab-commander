@@ -92,22 +92,42 @@ export function OverviewPage() {
   return (
     <>
       <PageHeader
-        eyebrow="Live command view"
+        eyebrow={
+          snapshot.hostedDemo ? "Hosted product showcase" : "Live command view"
+        }
         title="Infrastructure overview"
-        description="Current health, capacity, and activity across your simulated homelab."
+        description={
+          snapshot.hostedDemo
+            ? "Explore a fully interactive simulated homelab. Showcase changes are temporary and reset automatically."
+            : "Current health, capacity, and activity across your simulated homelab."
+        }
         actions={
           <>
             <Badge tone="info">
               <Radio size={12} />
-              Demo Environment Active
+              {snapshot.hostedDemo
+                ? "Hosted Demo · Auto-reset"
+                : "Demo Environment Active"}
             </Badge>
-            <Link
-              className="button button-secondary button-default"
-              href="/settings?section=live"
-            >
-              Configure live mode
-              <ArrowRight size={14} />
-            </Link>
+            {snapshot.hostedDemo ? (
+              <a
+                className="button button-secondary button-default"
+                href="https://github.com/chadkraus87/home-lab-commander"
+                target="_blank"
+                rel="noreferrer"
+              >
+                View source
+                <ArrowRight size={14} />
+              </a>
+            ) : (
+              <Link
+                className="button button-secondary button-default"
+                href="/settings?section=live"
+              >
+                Configure live mode
+                <ArrowRight size={14} />
+              </Link>
+            )}
           </>
         }
       />

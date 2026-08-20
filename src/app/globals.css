@@ -3271,6 +3271,10 @@ textarea::placeholder {
   border-color: var(--blue);
   box-shadow: 0 0 0 2px var(--blue-soft);
 }
+.mode-cards > button:disabled {
+  cursor: not-allowed;
+  opacity: 0.58;
+}
 .mode-cards > button > span {
   width: 37px;
   height: 37px;

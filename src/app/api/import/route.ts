@@ -1,4 +1,5 @@
 import type { AppSnapshot } from "@/domain/types";
+import { hostedDemoMessage, isHostedDemo } from "@/server/deployment";
 import { assertSameOrigin } from "@/server/request-security";
 import { getStore } from "@/server/store";
 
@@ -16,6 +17,8 @@ interface PortableExport {
 export async function POST(request: Request): Promise<Response> {
   try {
     assertSameOrigin(request);
+    if (isHostedDemo())
+      return Response.json({ error: hostedDemoMessage }, { status: 403 });
     const payload: unknown = await request.json();
     if (!isPortableExport(payload))
       return Response.json(

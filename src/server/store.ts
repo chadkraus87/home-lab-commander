@@ -1,6 +1,7 @@
 import "server-only";
 
 import { randomUUID } from "node:crypto";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { DatabaseSync } from "node:sqlite";
 import type { z } from "zod";
@@ -14,6 +15,7 @@ import type {
 } from "@/domain/schemas";
 import { createDemoSnapshot } from "@/simulation/demo-data";
 import { openDatabase } from "@/server/database";
+import { isHostedDemo } from "@/server/deployment";
 import { readSnapshot } from "@/server/store-mappers";
 import { seedDatabase } from "@/server/seed-store";
 
@@ -25,8 +27,10 @@ type SettingsInput = z.infer<typeof settingsInputSchema>;
 
 export class AppStore {
   private readonly database: DatabaseSync;
+  private readonly hostedDemo: boolean;
 
-  constructor(databasePath: string, seedWhenEmpty = true) {
+  constructor(databasePath: string, seedWhenEmpty = true, hostedDemo = false) {
+    this.hostedDemo = hostedDemo;
     this.database = openDatabase(databasePath);
     const row = this.database
       .prepare("SELECT COUNT(*) AS count FROM devices")
@@ -41,7 +45,13 @@ export class AppStore {
   }
 
   snapshot(): AppSnapshot {
-    return readSnapshot(this.database);
+    const snapshot = readSnapshot(this.database);
+    if (!this.hostedDemo) return snapshot;
+    return {
+      ...snapshot,
+      hostedDemo: true,
+      settings: { ...snapshot.settings, mode: "demo" },
+    };
   }
 
   addDevice(input: DeviceInput): AppSnapshot {
@@ -344,9 +354,14 @@ declare global {
 
 export function getStore(): AppStore {
   if (!globalThis.homeLabStore) {
+    const hostedDemo = isHostedDemo();
     globalThis.homeLabStore = new AppStore(
       process.env.HOMELAB_DATABASE_PATH ??
-        join(process.cwd(), "data", "homelab.db"),
+        (hostedDemo
+          ? join(tmpdir(), "home-lab-commander.db")
+          : join(process.cwd(), "data", "homelab.db")),
+      true,
+      hostedDemo,
     );
   }
   return globalThis.homeLabStore;

@@ -232,6 +232,55 @@ function EnvironmentSettings() {
     );
     setStep(1);
   }
+  if (snapshot.hostedDemo)
+    return (
+      <SettingsCard
+        title="Environment"
+        description="This public deployment is intentionally limited to safe Demo Mode."
+        icon={<Radar />}
+      >
+        <div className="mode-cards">
+          <button className="active" type="button">
+            <span>
+              <Play />
+            </span>
+            <div>
+              <strong>Hosted Demo</strong>
+              <p>Interactive simulated infrastructure with ephemeral state.</p>
+            </div>
+            <StatusBadge status="healthy" />
+          </button>
+          <button type="button" disabled aria-describedby="hosted-live-note">
+            <span>
+              <Wifi />
+            </span>
+            <div>
+              <strong>Live Mode</strong>
+              <p>Available only when HomeLab Commander runs on your own LAN.</p>
+            </div>
+            <StatusBadge status="unknown" />
+          </button>
+        </div>
+        <div className="settings-note" id="hosted-live-note">
+          <ShieldCheck />
+          <p>
+            Vercel cannot—and should not—reach your private network. Clone the
+            project and run it locally to enable approved-range discovery,
+            diagnostics, imports, and read-only Docker inventory.
+          </p>
+        </div>
+        <div className="form-actions">
+          <a
+            className="button button-secondary button-default"
+            href="https://github.com/chadkraus87/home-lab-commander#run-locally"
+            target="_blank"
+            rel="noreferrer"
+          >
+            Local setup guide
+          </a>
+        </div>
+      </SettingsCard>
+    );
   return (
     <SettingsCard
       title="Environment"
@@ -553,6 +602,7 @@ function MonitoringSettings() {
 }
 
 function DockerSettings() {
+  const { snapshot } = useApp();
   const [state, setState] = useState<{
     available: boolean;
     message: string;
@@ -581,7 +631,11 @@ function DockerSettings() {
         </span>
         <div>
           <strong>Local Docker daemon</strong>
-          <p>{state?.message ?? "Not checked during this session."}</p>
+          <p>
+            {snapshot.hostedDemo
+              ? "Unavailable in the hosted showcase. Run locally to connect."
+              : (state?.message ?? "Not checked during this session.")}
+          </p>
         </div>
         <StatusBadge
           status={state?.available ? "healthy" : state ? "offline" : "unknown"}
@@ -596,7 +650,14 @@ function DockerSettings() {
         </p>
       </div>
       <div className="form-actions">
-        <Button variant="secondary" disabled={busy} onClick={check}>
+        <Button
+          variant="secondary"
+          disabled={busy || snapshot.hostedDemo}
+          onClick={check}
+          title={
+            snapshot.hostedDemo ? "Docker integration is local-only" : undefined
+          }
+        >
           <RefreshCw size={14} className={busy ? "spin" : ""} />
           {busy ? "Checking…" : "Check connection"}
         </Button>
@@ -669,7 +730,7 @@ function AppearanceSettings() {
 }
 
 function DataSettings() {
-  const { mutate, replaceSnapshot, busy } = useApp();
+  const { snapshot, mutate, replaceSnapshot, busy } = useApp();
   const fileInput = useRef<HTMLInputElement>(null);
   async function importFile(file: File) {
     const text = await file.text();
@@ -747,9 +808,15 @@ function DataSettings() {
           />
           <Button
             variant="secondary"
+            disabled={snapshot.hostedDemo}
             onClick={() => fileInput.current?.click()}
+            title={
+              snapshot.hostedDemo
+                ? "Imports are disabled in the public showcase"
+                : undefined
+            }
           >
-            Choose file
+            {snapshot.hostedDemo ? "Local-only" : "Choose file"}
           </Button>
         </div>
         <div className="danger-zone">

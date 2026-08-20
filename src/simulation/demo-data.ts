@@ -42,6 +42,7 @@ export function createDemoSnapshot(now = new Date()): AppSnapshot {
   const isoNow = now.toISOString();
   const devices = demoDevices(now);
   return {
+    hostedDemo: false,
     devices,
     services: demoServices(isoNow),
     containers: demoContainers(isoNow),

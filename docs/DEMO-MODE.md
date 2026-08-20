@@ -24,6 +24,12 @@ The previous snapshot is never mutated, which keeps React behavior and tests pre
 
 **Settings → Data → Reset Demo** runs a transaction that restores the complete original environment. The action requires browser confirmation and replaces manual records, so it is intentionally separated from normal navigation.
 
+## Hosted Demo
+
+The Vercel showcase runs the same deterministic environment with an additional server-enforced safety profile. Visitors can edit example records and reset the lab, but storage is ephemeral. Private-network discovery, diagnostics, imports, Docker access, and Live Mode are unavailable because a cloud function cannot safely administer a visitor's LAN.
+
+The UI labels this profile **Hosted showcase** and **Demo-only · ephemeral** so simulated telemetry is never confused with a live environment.
+
 ## Testing
 
 Unit tests pin the clock and assert identical snapshots for identical inputs. E2E tests reset the Demo Environment before every journey so workflows remain independent and reproducible.

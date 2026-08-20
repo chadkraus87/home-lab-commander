@@ -204,6 +204,7 @@ export interface AppSettings {
 }
 
 export interface AppSnapshot {
+  hostedDemo: boolean;
   devices: Device[];
   services: MonitoredService[];
   containers: ContainerRecord[];

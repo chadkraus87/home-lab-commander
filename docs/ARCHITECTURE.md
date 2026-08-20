@@ -22,6 +22,15 @@ flowchart LR
 
 The app runs in the default Node.js runtime. It does not use the Edge runtime because SQLite, local networking, and optional operating-system providers require Node APIs.
 
+## Deployment profiles
+
+The same application has two explicit runtime profiles:
+
+- **Local** uses `data/homelab.db`, permits guided Live Mode after user approval, and can call bounded local providers.
+- **Hosted Demo** is automatic when `VERCEL=1` or explicit with `HOMELAB_HOSTED_DEMO=1`. It stores SQLite in the runtime temporary directory, forces `settings.mode` to `demo`, and blocks discovery, diagnostics, imports, Docker access, and Live Mode activation.
+
+Migrations are included in Next.js output tracing because the repository reads them from the filesystem at runtime. Hosted SQLite is showcase state only: serverless cold starts and deployments can replace it.
+
 ## Directory responsibilities
 
 - `src/app`: route UI and narrow HTTP boundaries.
@@ -38,6 +47,8 @@ The app runs in the default Node.js runtime. It does not use the Edge runtime be
 The root Server Component loads a serializable `AppSnapshot` directly from SQLite and passes it into a client context. Demo Mode advances a client-side copy on a deterministic timer so UI telemetry feels alive without continuously writing synthetic samples.
 
 Persistent user changes use `/api/state`. The handler enforces same-origin browser mutations, validates a discriminated Zod action, calls one repository method, and returns a complete fresh snapshot. Import, export, discovery, diagnostics, Docker, and health each use dedicated route handlers.
+
+The hosted policy is evaluated server-side. Client controls explain the boundary, but route handlers remain the security enforcement point.
 
 ## Database
 
