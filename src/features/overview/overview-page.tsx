@@ -110,15 +110,13 @@ export function OverviewPage() {
                 : "Demo Environment Active"}
             </Badge>
             {snapshot.hostedDemo ? (
-              <a
+              <Link
                 className="button button-secondary button-default"
-                href="https://github.com/chadkraus87/home-lab-commander"
-                target="_blank"
-                rel="noreferrer"
+                href="/settings?section=live"
               >
-                View source
+                How this demo works
                 <ArrowRight size={14} />
-              </a>
+              </Link>
             ) : (
               <Link
                 className="button button-secondary button-default"
