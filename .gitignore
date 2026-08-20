@@ -39,6 +39,9 @@ yarn-error.log*
 /data/*.db-shm
 /data/*.db-wal
 /data/*.json
+/backups/*.db
+/backups/*.db-shm
+/backups/*.db-wal
 /playwright-report/
 /test-results/
 

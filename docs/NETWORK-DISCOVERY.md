@@ -34,6 +34,8 @@ Discovered records remain reviewable until the operator chooses which systems to
 
 Command availability and ping flags differ across macOS and Linux. Missing commands, local firewall rules, lack of ICMP permission, sleeping Wi-Fi clients, VLAN isolation, and IPv6-only networks can reduce results. These conditions produce an explanatory empty/error state rather than crashing the application.
 
+Docker Desktop adds another network namespace. Passive discovery inside the container can see its VM/container neighbor table instead of the Mac host's complete ARP table. Routed diagnostics may still work, but a native HomeLab Commander process is recommended when host-level discovery fidelity matters.
+
 ## Not implemented
 
 The current release does not use SNMP, SSH, aggressive port scans, vendor-cloud APIs, credential probes, public-internet scanning, or exploitation. Future discovery providers must preserve the same normalized result model and server-side allowlist checks.

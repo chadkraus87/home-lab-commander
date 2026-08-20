@@ -2,6 +2,7 @@ import { diagnosticInputSchema } from "@/domain/schemas";
 import { SafeHealthCheckProvider } from "@/server/health-checks";
 import { hostedDemoMessage, isHostedDemo } from "@/server/deployment";
 import { assertSameOrigin } from "@/server/request-security";
+import { log } from "@/server/logger";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -21,8 +22,15 @@ export async function POST(request: Request): Promise<Response> {
         { status: 400 },
       );
     const result = await new SafeHealthCheckProvider().run(parsed.data);
+    log("info", "diagnostic.completed", {
+      kind: parsed.data.kind,
+      ok: result.ok,
+    });
     return Response.json(result);
   } catch (error) {
+    log("warn", "diagnostic.rejected", {
+      errorType: error instanceof Error ? error.name : "unknown",
+    });
     return Response.json(
       {
         error:

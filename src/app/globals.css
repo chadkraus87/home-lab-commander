@@ -2528,6 +2528,29 @@ textarea::placeholder {
   border: 1px solid color-mix(in srgb, var(--blue) 24%, var(--border));
   border-radius: 9px;
 }
+
+.hosted-privacy-banner {
+  align-items: center;
+  background: color-mix(in srgb, var(--blue) 10%, var(--panel));
+  border-bottom: 1px solid color-mix(in srgb, var(--blue) 30%, var(--border));
+  color: var(--muted);
+  display: flex;
+  font-size: 0.78rem;
+  gap: 0.55rem;
+  justify-content: center;
+  min-height: 34px;
+  padding: 0.45rem 1rem;
+  text-align: center;
+}
+
+.hosted-privacy-banner svg {
+  color: var(--blue);
+  flex: 0 0 auto;
+}
+
+.hosted-privacy-banner strong {
+  color: var(--text);
+}
 .provider-banner > span {
   width: 34px;
   height: 34px;

@@ -20,17 +20,17 @@ Explore the public app at **[home-lab-commander.vercel.app](https://home-lab-com
 
 The hosted deployment is intentionally different from a local installation:
 
-| Capability                                                | Hosted Demo  |   Local installation    |
-| --------------------------------------------------------- | :----------: | :---------------------: |
-| Deterministic, evolving lab telemetry                     |      ✓       |            ✓            |
-| Devices, services, topology, alerts, inventory, and notes |      ✓       |            ✓            |
-| Interactive demo mutations and reset                      | ✓, ephemeral |      ✓, persistent      |
-| Portable JSON export                                      |      ✓       |            ✓            |
-| Portable JSON import                                      |      —       |            ✓            |
-| Private-network discovery and diagnostics                 |      —       | ✓, approved ranges only |
-| Read-only local Docker inventory                          |      —       |        ✓, opt-in        |
+| Capability                                                | Hosted Demo |   Local installation    |
+| --------------------------------------------------------- | :---------: | :---------------------: |
+| Deterministic, evolving lab telemetry                     |      ✓      |            ✓            |
+| Devices, services, topology, alerts, inventory, and notes |      ✓      |            ✓            |
+| Interactive demo mutations and reset                      | ✓, this tab |      ✓, persistent      |
+| Portable JSON export                                      |      ✓      |            ✓            |
+| Portable JSON import                                      |      —      |            ✓            |
+| Private-network discovery and diagnostics                 |      —      | ✓, approved ranges only |
+| Read-only local Docker inventory                          |      —      |        ✓, opt-in        |
 
-Vercel cannot reach a visitor's private network, and the hosted build does not try. Its SQLite data is temporary and may reset on a cold start or deployment. Run locally for persistent state and Live Mode.
+Vercel cannot reach a visitor's private network, and the hosted build does not try. Hosted edits are kept in that visitor's browser tab, never written to a shared server database, and reset when the tab closes. Run locally for persistent state and Live Mode.
 
 ## Product tours
 
@@ -80,7 +80,7 @@ flowchart LR
 
 The application is a single Node process for a personal homelab. Server Components read the repository directly; narrow route handlers validate mutations and provider operations. UI code consumes normalized domain records instead of Docker-, OS-, or vendor-specific output.
 
-See [Architecture](docs/ARCHITECTURE.md), [Security](docs/SECURITY.md), and [Network discovery](docs/NETWORK-DISCOVERY.md) for the complete boundaries.
+See [Architecture](docs/ARCHITECTURE.md), [Security](docs/SECURITY.md), the [2026-08-20 security audit](docs/SECURITY-AUDIT.md), and [Network discovery](docs/NETWORK-DISCOVERY.md) for the complete boundaries.
 
 ## Run locally
 
@@ -103,7 +103,7 @@ npm install
 npm run dev
 ```
 
-Open [http://127.0.0.1:3000](http://127.0.0.1:3000). The first request creates `data/homelab.db`, applies append-only migrations, and seeds the Demo Environment.
+Open [http://127.0.0.1:3000](http://127.0.0.1:3000). The first request creates `data/homelab.db`, applies append-only migrations, and seeds the Demo Environment. Stop the server with `Ctrl C`.
 
 Development and production scripts bind to loopback by default. Override the hostname only when you deliberately intend to expose the application to a trusted LAN.
 
@@ -114,15 +114,19 @@ npm run build
 npm run start
 ```
 
-HomeLab Commander does not provide multi-user authentication in this local-first release. Keep it on loopback or a trusted, access-controlled network.
+Loopback is the safest default. Optional single-operator access control is available through `HOMELAB_ACCESS_TOKEN`; shared or public use still requires authenticated TLS and a separate multi-user authorization design.
 
 ### Docker
 
 ```bash
-docker compose up --build
+docker compose up -d --build
+docker compose ps
+docker compose logs -f homelab-commander
 ```
 
-Application data persists in the `homelab-data` volume. The Docker socket is not mounted by default. Mounting it grants administrative-equivalent host access; do so only deliberately and keep the app on a trusted interface.
+The Compose profile is suitable for an always-on, loopback-only installation. It uses a non-root, read-only application container with dropped capabilities, `no-new-privileges`, resource limits, health checks, log rotation, persistent `homelab-data`, and a network-isolated daily backup sidecar retaining 14 verified snapshots in `homelab-backups`.
+
+On macOS, Docker Desktop's network namespace can limit passive neighbor discovery, and the app intentionally does not mount the host Docker socket. Use the native production process when complete host-LAN discovery and read-only host Docker inventory matter; use Docker when isolation, restart behavior, and manual records/diagnostics matter more. See [Operations](docs/OPERATIONS.md) for startup, backup, access-control, and recovery guidance.
 
 ## Demo Mode
 
@@ -140,22 +144,41 @@ Telemetry evolves deterministically: utilization, latency, throughput, uptime, r
 
 1. Open **Settings → Networks** and confirm a private CIDR you own and control.
 2. Open **Settings → Environment**.
-3. Choose passive neighbor-table discovery or a rate-limited ping sweep.
-4. Review the exact range, operation, and explicit exclusions.
-5. Start discovery, review the results, and choose which devices to add.
-6. Optionally use **Settings → Docker** to test the local read-only provider.
+3. Select the **Live Mode** card; the visible four-step activation setup opens.
+4. Choose passive neighbor-table discovery or a rate-limited ping sweep.
+5. Review the exact range, operation, and explicit exclusions.
+6. Explicitly start discovery, review the results, and choose which devices to add.
+7. Optionally use **Settings → Docker** to test the local read-only provider.
 
 Public ranges, unapproved private ranges, and discovery requests larger than one `/24` are rejected. Discovery never performs credential attempts, exploitation, arbitrary commands, or public-internet scanning.
 
+Live Mode pauses simulated telemetry and enables local tools on demand; it does not invent live metrics or silently poll your network. Seed records remain clearly marked as simulated until you replace or supplement them with manual/discovered records.
+
 ## Configuration
 
-| Variable                | Purpose                                                | Default                          |
-| ----------------------- | ------------------------------------------------------ | -------------------------------- |
-| `HOMELAB_DATABASE_PATH` | Absolute SQLite database location                      | `data/homelab.db`                |
-| `HOMELAB_HOSTED_DEMO=1` | Force the demo-only hosted safety profile              | Off locally; automatic on Vercel |
-| `HOMELAB_STANDALONE=1`  | Produce Next.js standalone output for the Docker image | Off                              |
+| Variable                        | Purpose                                                 | Default                          |
+| ------------------------------- | ------------------------------------------------------- | -------------------------------- |
+| `HOMELAB_DATABASE_PATH`         | Absolute SQLite database location                       | `data/homelab.db`                |
+| `HOMELAB_HOSTED_DEMO=1`         | Force the demo-only hosted safety profile               | Off locally; automatic on Vercel |
+| `HOMELAB_STANDALONE=1`          | Produce Next.js standalone output for the Docker image  | Off                              |
+| `HOMELAB_ACCESS_USERNAME`       | Optional single-operator HTTP Basic username            | `homelab`                        |
+| `HOMELAB_ACCESS_TOKEN`          | Optional access token; minimum 24 characters            | Disabled                         |
+| `HOMELAB_BACKUP_DIRECTORY`      | Native backup destination                               | `backups`                        |
+| `HOMELAB_BACKUP_RETENTION`      | Number of verified SQLite backups retained              | `14`                             |
+| `HOMELAB_BACKUP_INTERVAL_HOURS` | Docker backup-sidecar interval, from 0.25 through 168 h | `24`                             |
 
-Hosted mode stores SQLite in the platform's writable temporary directory. This is deliberate showcase state, not durable storage.
+Hosted mode uses a pristine, temporary server snapshot while visitor changes stay in versioned `sessionStorage`. Direct hosted mutations are rejected, so warm serverless instances cannot leak one visitor's example data to another.
+
+### Backups
+
+Create and integrity-check a native SQLite backup:
+
+```bash
+npm run backup
+npm run backup:verify -- backups/homelab-YYYYMMDDTHHMMSS.sssZ.db
+```
+
+Docker performs this automatically. List or copy its backups with `docker compose exec homelab-backup ls -lh /app/backups` and `docker compose cp homelab-backup:/app/backups ./docker-backups`. Keep an additional copy on another disk; a volume is persistence, not disaster recovery.
 
 ## Quality checks
 
@@ -206,6 +229,10 @@ HomeLab Commander is defensive and local-first:
 - Discovery and diagnostics are bounded by target limits, timeouts, and rate limits.
 - Docker access is read-only and opt-in.
 - Vercel deployments fail closed to hosted Demo Mode.
+- Hosted edits are browser-tab scoped and server mutations are disabled.
+- Optional local access control uses constant-time credential comparison.
+- Portable imports are fully schema-validated, size-limited, and reopen in Demo Mode.
+- Docker runs non-root with a read-only root filesystem, dropped capabilities, and no host socket.
 - No arbitrary terminal, credential attack, public scanning, or unattended disruptive action is exposed.
 
 Review [Security](docs/SECURITY.md) before enabling Live Mode or exposing the local app beyond loopback. Please report security issues privately rather than opening a public issue with sensitive details.
@@ -236,6 +263,10 @@ docs             Architecture, security, discovery, and roadmap notes
 **Playwright cannot launch.** Run `npx playwright install chromium` and retry.
 
 **Hosted changes disappeared.** That is expected: the public showcase uses ephemeral state. Clone the app for persistent local data.
+
+**Live Mode looked selected but nothing scanned.** Selection now opens a visible four-step setup. No network call is made until you reach step 3 and press **Run discovery**. This is intentional.
+
+**Docker Live discovery is incomplete.** Docker Desktop may not expose the Mac host's neighbor table to the container. Run the production build natively for the fullest local provider access.
 
 ## Roadmap and contributing
 

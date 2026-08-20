@@ -12,6 +12,11 @@ import {
 } from "react";
 import type { AppSnapshot } from "@/domain/types";
 import { advanceSimulation } from "@/simulation/engine";
+import {
+  applyHostedMutation,
+  hostedSessionStorageKey,
+  parseHostedSession,
+} from "@/simulation/hosted-state";
 
 interface AppContextValue {
   snapshot: AppSnapshot;
@@ -37,6 +42,27 @@ export function AppProvider({
   const tick = useRef(0);
 
   useEffect(() => {
+    if (!initialSnapshot.hostedDemo) return;
+    const timeout = window.setTimeout(() => {
+      try {
+        setSnapshot(
+          parseHostedSession(
+            window.sessionStorage.getItem(hostedSessionStorageKey),
+            initialSnapshot,
+          ),
+        );
+      } catch {
+        setToast({
+          message:
+            "Browser session storage is unavailable. Demo changes will last only until this page reloads.",
+          tone: "error",
+        });
+      }
+    }, 0);
+    return () => window.clearTimeout(timeout);
+  }, [initialSnapshot]);
+
+  useEffect(() => {
     const interval = window.setInterval(() => {
       tick.current += 1;
       setSnapshot((current) => advanceSimulation(current, tick.current));
@@ -54,6 +80,29 @@ export function AppProvider({
     async (payload: unknown, successMessage = "Saved") => {
       setBusy(true);
       try {
+        if (snapshot.hostedDemo) {
+          const result = applyHostedMutation(snapshot, payload);
+          if (!result.ok) {
+            setToast({ message: result.error, tone: "error" });
+            return false;
+          }
+          setSnapshot(result.snapshot);
+          try {
+            window.sessionStorage.setItem(
+              hostedSessionStorageKey,
+              JSON.stringify(result.snapshot),
+            );
+          } catch {
+            setToast({
+              message:
+                "Change applied for this page only because browser session storage is unavailable.",
+              tone: "error",
+            });
+            return true;
+          }
+          setToast({ message: successMessage, tone: "success" });
+          return true;
+        }
         const response = await fetch("/api/state", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -81,7 +130,7 @@ export function AppProvider({
         setBusy(false);
       }
     },
-    [],
+    [snapshot],
   );
 
   const value = useMemo<AppContextValue>(

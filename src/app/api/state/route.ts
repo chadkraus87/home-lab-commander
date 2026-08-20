@@ -3,7 +3,8 @@ import {
   assertSameOrigin,
   RequestSecurityError,
 } from "@/server/request-security";
-import { hostedDemoMessage, isHostedDemo } from "@/server/deployment";
+import { isHostedDemo } from "@/server/deployment";
+import { log } from "@/server/logger";
 import { getStore, StoreError } from "@/server/store";
 
 export const runtime = "nodejs";
@@ -18,6 +19,16 @@ export function GET(): Response {
 export async function POST(request: Request): Promise<Response> {
   try {
     assertSameOrigin(request);
+    if (isHostedDemo()) {
+      log("warn", "state.mutation.blocked", { reason: "hosted-demo" });
+      return Response.json(
+        {
+          error:
+            "Hosted demo changes are stored only in this browser tab. Server mutations are disabled.",
+        },
+        { status: 403 },
+      );
+    }
     const parsed = mutationSchema.safeParse(await request.json());
     if (!parsed.success)
       return Response.json(
@@ -58,20 +69,24 @@ export async function POST(request: Request): Promise<Response> {
         snapshot = store.deleteNote(parsed.data.id);
         break;
       case "update-settings":
-        if (isHostedDemo() && parsed.data.data.mode === "live")
-          return Response.json({ error: hostedDemoMessage }, { status: 403 });
         snapshot = store.updateSettings(parsed.data.data);
         break;
       case "reset-demo":
         snapshot = store.resetDemo();
         break;
     }
+    log("info", "state.mutation.completed", { action: parsed.data.action });
     return Response.json(snapshot);
   } catch (error) {
-    if (error instanceof StoreError)
+    if (error instanceof StoreError) {
+      log("warn", "state.mutation.rejected", { status: error.status });
       return Response.json({ error: error.message }, { status: error.status });
-    if (error instanceof RequestSecurityError)
+    }
+    if (error instanceof RequestSecurityError) {
+      log("warn", "state.mutation.blocked", { reason: "cross-origin" });
       return Response.json({ error: error.message }, { status: 403 });
+    }
+    log("error", "state.mutation.failed");
     return Response.json(
       {
         error:

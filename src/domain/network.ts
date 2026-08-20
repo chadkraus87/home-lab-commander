@@ -1,5 +1,3 @@
-import { isIP } from "node:net";
-
 export interface ParsedCidr {
   address: string;
   prefix: number;
@@ -9,9 +7,13 @@ export interface ParsedCidr {
 }
 
 export function ipv4ToNumber(address: string): number | null {
-  if (isIP(address) !== 4) return null;
-  return address
-    .split(".")
+  const parts = address.split(".");
+  if (
+    parts.length !== 4 ||
+    parts.some((part) => !/^(0|[1-9]\d{0,2})$/.test(part) || Number(part) > 255)
+  )
+    return null;
+  return parts
     .map(Number)
     .reduce((value, octet) => ((value << 8) | octet) >>> 0, 0);
 }
@@ -22,7 +24,12 @@ export function numberToIpv4(value: number): string {
 
 export function parseCidr(value: string): ParsedCidr | null {
   const [address, prefixValue, ...rest] = value.trim().split("/");
-  if (!address || !prefixValue || rest.length > 0 || isIP(address) !== 4)
+  if (
+    !address ||
+    !prefixValue ||
+    rest.length > 0 ||
+    ipv4ToNumber(address) === null
+  )
     return null;
   const prefix = Number(prefixValue);
   if (!Number.isInteger(prefix) || prefix < 0 || prefix > 32) return null;
@@ -56,7 +63,7 @@ export function isPrivateIpv4(address: string): boolean {
 
 export function isAllowedLocalAddress(address: string): boolean {
   if (isPrivateIpv4(address)) return true;
-  if (isIP(address) !== 6) return false;
+  if (!isIpv6(address)) return false;
   const normalized = address.toLowerCase();
   return (
     normalized === "::1" ||
@@ -67,6 +74,16 @@ export function isAllowedLocalAddress(address: string): boolean {
     normalized.startsWith("fea") ||
     normalized.startsWith("feb")
   );
+}
+
+function isIpv6(address: string): boolean {
+  if (!address.includes(":") || address.includes("%")) return false;
+  try {
+    const url = new URL(`http://[${address}]/`);
+    return url.hostname.startsWith("[") && url.hostname.endsWith("]");
+  } catch {
+    return false;
+  }
 }
 
 export function isPrivateCidr(value: string): boolean {

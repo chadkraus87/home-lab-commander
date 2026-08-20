@@ -2,14 +2,68 @@ services:
   homelab-commander:
     build: .
     container_name: homelab-commander
+    init: true
     restart: unless-stopped
+    read_only: true
     ports:
       - "127.0.0.1:3000:3000"
     volumes:
       - homelab-data:/app/data
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=64m
     environment:
       NODE_ENV: production
       HOMELAB_DATABASE_PATH: /app/data/homelab.db
+      HOMELAB_ACCESS_USERNAME: ${HOMELAB_ACCESS_USERNAME:-homelab}
+      HOMELAB_ACCESS_TOKEN: ${HOMELAB_ACCESS_TOKEN:-}
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    pids_limit: 256
+    mem_limit: 768m
+    cpus: 1.5
+    stop_grace_period: 30s
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: "3"
+
+  homelab-backup:
+    build: .
+    container_name: homelab-backup
+    init: true
+    restart: unless-stopped
+    read_only: true
+    network_mode: none
+    entrypoint: ["node", "scripts/backup-loop.mjs"]
+    depends_on:
+      homelab-commander:
+        condition: service_healthy
+    volumes:
+      - homelab-data:/app/data
+      - homelab-backups:/app/backups
+    environment:
+      HOMELAB_DATABASE_PATH: /app/data/homelab.db
+      HOMELAB_BACKUP_DIRECTORY: /app/backups
+      HOMELAB_BACKUP_RETENTION: ${HOMELAB_BACKUP_RETENTION:-14}
+      HOMELAB_BACKUP_INTERVAL_HOURS: ${HOMELAB_BACKUP_INTERVAL_HOURS:-24}
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    pids_limit: 64
+    mem_limit: 256m
+    cpus: 0.5
+    healthcheck:
+      disable: true
+    logging:
+      driver: json-file
+      options:
+        max-size: 5m
+        max-file: "2"
 
 volumes:
   homelab-data:
+  homelab-backups:

@@ -26,9 +26,9 @@ The previous snapshot is never mutated, which keeps React behavior and tests pre
 
 ## Hosted Demo
 
-The Vercel showcase runs the same deterministic environment with an additional server-enforced safety profile. Visitors can edit example records and reset the lab, but storage is ephemeral. Private-network discovery, diagnostics, imports, Docker access, and Live Mode are unavailable because a cloud function cannot safely administer a visitor's LAN.
+The Vercel showcase runs the same deterministic environment with an additional server-enforced safety profile. Visitors can edit example records and reset the lab inside one browser tab. State is stored in versioned `sessionStorage`, resets when that tab closes, and is never written into a shared server database. Private-network discovery, diagnostics, imports, Docker access, and Live Mode are unavailable because a cloud function cannot safely administer a visitor's LAN.
 
-The UI labels this profile **Hosted showcase** and **Demo-only · ephemeral** so simulated telemetry is never confused with a live environment.
+The UI labels this profile **Hosted showcase** and **Demo-only · ephemeral**, plus a global example-data privacy notice, so simulated telemetry is never confused with a live environment and visitors know not to enter sensitive information.
 
 ## Testing
 

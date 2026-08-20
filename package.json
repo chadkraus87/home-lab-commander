@@ -4,6 +4,9 @@
   "private": true,
   "type": "module",
   "license": "MIT",
+  "allowScripts": {
+    "unrs-resolver": false
+  },
   "engines": {
     "node": "24.x"
   },
@@ -18,6 +21,8 @@
     "test:coverage": "vitest run --coverage",
     "test:e2e": "playwright test",
     "audit:browser": "node scripts/browser-audit.mjs",
+    "backup": "node scripts/backup-database.mjs",
+    "backup:verify": "node scripts/verify-backup.mjs",
     "media:capture": "node scripts/capture-readme-media.mjs",
     "format": "prettier --write .",
     "format:check": "prettier --check ."

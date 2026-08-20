@@ -28,6 +28,7 @@ import {
   Search,
   Server,
   Settings,
+  ShieldCheck,
   Sun,
   X,
 } from "lucide-react";
@@ -138,7 +139,7 @@ export function AppShell({ children }: { children: ReactNode }) {
                 ? "Demo-only · ephemeral"
                 : snapshot.settings.mode === "demo"
                   ? "Simulation running"
-                  : "Local providers active"}
+                  : "Simulation paused · tools on demand"}
             </small>
           </div>
         </div>
@@ -261,6 +262,15 @@ export function AppShell({ children }: { children: ReactNode }) {
             </Link>
           </div>
         </header>
+        {snapshot.hostedDemo ? (
+          <div className="hosted-privacy-banner" role="note">
+            <ShieldCheck size={16} />
+            <span>
+              <strong>Browser-session demo:</strong> use example data only.
+              Changes stay in this tab and reset when it closes.
+            </span>
+          </div>
+        ) : null}
         <main className="page-content">{children}</main>
       </div>
       <CommandPalette open={commandOpen} onOpenChange={setCommandOpen} />

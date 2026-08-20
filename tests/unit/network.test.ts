@@ -21,7 +21,10 @@ describe("private network policy", () => {
   it("rejects public and malformed addresses", () => {
     expect(isPrivateIpv4("8.8.8.8")).toBe(false);
     expect(isPrivateIpv4("999.1.1.1")).toBe(false);
+    expect(isPrivateIpv4("192.168.001.1")).toBe(false);
     expect(isAllowedLocalAddress("2606:4700:4700::1111")).toBe(false);
+    expect(isAllowedLocalAddress("fd10::5%en0")).toBe(false);
+    expect(isAllowedLocalAddress("not-an-address")).toBe(false);
   });
 
   it("validates the complete CIDR boundary", () => {

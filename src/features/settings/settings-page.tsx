@@ -172,6 +172,9 @@ function GeneralSettings() {
 function EnvironmentSettings() {
   const { snapshot, mutate, busy } = useApp();
   const [step, setStep] = useState(1);
+  const [activationOpen, setActivationOpen] = useState(
+    snapshot.settings.mode === "live",
+  );
   const [cidr, setCidr] = useState(
     snapshot.settings.approvedCidrs[0] ?? "192.168.1.0/24",
   );
@@ -208,8 +211,8 @@ function EnvironmentSettings() {
     }
   }
   async function promoteAndActivate() {
-    for (const result of results.filter((item) => selected.has(item.ip)))
-      await mutate(
+    for (const result of results.filter((item) => selected.has(item.ip))) {
+      const saved = await mutate(
         {
           action: "add-device",
           data: {
@@ -224,13 +227,18 @@ function EnvironmentSettings() {
         },
         `Added ${result.ip}`,
       );
-    await updateSettings(
+      if (!saved) return;
+    }
+    const activated = await updateSettings(
       mutate,
       snapshot.settings,
       { mode: "live", discoveryMethod: method },
       "Live Mode activated",
     );
-    setStep(1);
+    if (activated) {
+      setActivationOpen(false);
+      setStep(1);
+    }
   }
   if (snapshot.hostedDemo)
     return (
@@ -289,15 +297,25 @@ function EnvironmentSettings() {
     >
       <div className="mode-cards">
         <button
-          className={snapshot.settings.mode === "demo" ? "active" : ""}
-          onClick={() =>
-            updateSettings(
+          type="button"
+          aria-pressed={snapshot.settings.mode === "demo" && !activationOpen}
+          className={
+            snapshot.settings.mode === "demo" && !activationOpen ? "active" : ""
+          }
+          onClick={async () => {
+            const saved = await updateSettings(
               mutate,
               snapshot.settings,
               { mode: "demo" },
               "Demo Mode activated",
-            )
-          }
+            );
+            if (saved) {
+              setActivationOpen(false);
+              setStep(1);
+              setResults([]);
+              setScanError("");
+            }
+          }}
         >
           <span>
             <Play />
@@ -311,8 +329,17 @@ function EnvironmentSettings() {
           />
         </button>
         <button
-          className={snapshot.settings.mode === "live" ? "active" : ""}
-          onClick={() => setStep(1)}
+          type="button"
+          aria-pressed={snapshot.settings.mode === "live" || activationOpen}
+          className={
+            snapshot.settings.mode === "live" || activationOpen ? "active" : ""
+          }
+          onClick={() => {
+            setActivationOpen(true);
+            setStep(1);
+            setResults([]);
+            setScanError("");
+          }}
         >
           <span>
             <Wifi />
@@ -322,164 +349,188 @@ function EnvironmentSettings() {
             <p>Approved local ranges and optional Docker integration.</p>
           </div>
           <StatusBadge
-            status={snapshot.settings.mode === "live" ? "healthy" : "unknown"}
+            status={
+              snapshot.settings.mode === "live"
+                ? "healthy"
+                : activationOpen
+                  ? "degraded"
+                  : "unknown"
+            }
           />
         </button>
       </div>
-      <div className="onboarding">
-        <header>
-          <div>
-            <Badge tone="info">Step {step} of 4</Badge>
-            <strong>
-              {step === 1
-                ? "Choose an approved network"
-                : step === 2
-                  ? "Review exactly what will happen"
-                  : step === 3
-                    ? "Run bounded discovery"
-                    : "Review discovered devices"}
-            </strong>
-          </div>
-          <div className="step-dots">
-            {[1, 2, 3, 4].map((item) => (
-              <i key={item} className={item <= step ? "active" : ""} />
-            ))}
-          </div>
-        </header>
-        {step === 1 ? (
-          <div className="onboarding-body">
-            <Field label="Approved private network">
-              <select
-                value={cidr}
-                onChange={(event) => setCidr(event.target.value)}
-              >
-                {snapshot.settings.approvedCidrs.map((item) => (
-                  <option key={item}>{item}</option>
-                ))}
-              </select>
-            </Field>
-            <Field label="Discovery method">
-              <select
-                value={method}
-                onChange={(event) =>
-                  setMethod(event.target.value as "passive" | "ping")
-                }
-              >
-                <option value="passive">
-                  Passive neighbor table (recommended)
-                </option>
-                <option value="ping">Rate-limited ping sweep</option>
-              </select>
-            </Field>
-            <p>
-              Need a different range? Add and approve it in the Networks section
-              first.
-            </p>
-            <Button onClick={() => setStep(2)}>Review discovery plan</Button>
-          </div>
-        ) : step === 2 ? (
-          <div className="onboarding-body review-plan">
-            <ShieldCheck />
+      {!activationOpen ? (
+        <div className="settings-note" role="status">
+          <ShieldCheck />
+          <p>
+            {snapshot.settings.mode === "live"
+              ? "Live Mode is active. Select the Live Mode card to run another bounded discovery."
+              : "Demo Mode is active. Select Live Mode to begin the four-step safety review. No network operation runs until you explicitly start discovery in step 3."}
+          </p>
+        </div>
+      ) : (
+        <div className="onboarding" aria-label="Live Mode activation setup">
+          <header>
             <div>
-              <h3>Discovery boundary</h3>
-              <p>
-                <strong>Range:</strong> {cidr}
-              </p>
-              <p>
-                <strong>Method:</strong>{" "}
-                {method === "passive"
-                  ? "Read the local ARP/neighbour table only"
-                  : "At most 254 hosts, eight checks at a time, 1.5 second timeout"}
-              </p>
-              <p>
-                <strong>Not performed:</strong> port scanning, login attempts,
-                public-address scanning, exploitation, or configuration changes.
-              </p>
+              <Badge tone="info">Activation setup selected</Badge>
+              <Badge tone="neutral">Step {step} of 4</Badge>
+              <strong>
+                {step === 1
+                  ? "Choose an approved network"
+                  : step === 2
+                    ? "Review exactly what will happen"
+                    : step === 3
+                      ? "Run bounded discovery"
+                      : "Review discovered devices"}
+              </strong>
             </div>
-            <div className="onboarding-actions">
-              <Button variant="ghost" onClick={() => setStep(1)}>
-                Back
-              </Button>
-              <Button onClick={() => setStep(3)}>I understand—continue</Button>
-            </div>
-          </div>
-        ) : step === 3 ? (
-          <div className="onboarding-body scan-ready">
-            <Radar className={scanning ? "spin" : ""} />
-            <h3>{scanning ? "Discovery in progress" : "Ready to discover"}</h3>
-            <p>
-              The selected operation begins only when you press the button
-              below.
-            </p>
-            {scanError ? <p className="field-error">{scanError}</p> : null}
-            <div className="onboarding-actions">
-              <Button
-                variant="ghost"
-                onClick={() => setStep(2)}
-                disabled={scanning}
-              >
-                Back
-              </Button>
-              <Button onClick={runDiscovery} disabled={scanning}>
-                {scanning ? "Checking local network…" : "Run discovery"}
-              </Button>
-            </div>
-          </div>
-        ) : (
-          <div className="onboarding-body">
-            <div className="discovery-results">
-              {results.map((result) => (
-                <label key={result.ip}>
-                  <input
-                    type="checkbox"
-                    checked={selected.has(result.ip)}
-                    onChange={(event) =>
-                      setSelected((current) => {
-                        const next = new Set(current);
-                        if (event.target.checked) next.add(result.ip);
-                        else next.delete(result.ip);
-                        return next;
-                      })
-                    }
-                  />
-                  <span>
-                    <strong>{result.hostname ?? result.ip}</strong>
-                    <small>
-                      {result.ip} · {result.macAddress ?? "MAC unavailable"} ·{" "}
-                      {result.confidence} confidence
-                    </small>
-                  </span>
-                  <StatusBadge
-                    status={
-                      result.status === "reachable" ? "healthy" : "unknown"
-                    }
-                  />
-                </label>
+            <div className="step-dots">
+              {[1, 2, 3, 4].map((item) => (
+                <i key={item} className={item <= step ? "active" : ""} />
               ))}
-              {results.length === 0 ? (
-                <div className="empty-discovery">
-                  <Network />
-                  <strong>No neighbors observed</strong>
-                  <p>
-                    Nothing is broken. The approved network may be empty, or
-                    passive discovery may not have enough local information yet.
-                  </p>
-                </div>
-              ) : null}
             </div>
-            <div className="onboarding-actions">
-              <Button variant="ghost" onClick={() => setStep(1)}>
-                Start over
-              </Button>
-              <Button disabled={busy} onClick={promoteAndActivate}>
-                {results.length
-                  ? `Add ${selected.size} and activate Live Mode`
-                  : "Activate Live Mode without devices"}
-              </Button>
+          </header>
+          {step === 1 ? (
+            <div className="onboarding-body">
+              <Field label="Approved private network">
+                <select
+                  value={cidr}
+                  onChange={(event) => setCidr(event.target.value)}
+                >
+                  {snapshot.settings.approvedCidrs.map((item) => (
+                    <option key={item}>{item}</option>
+                  ))}
+                </select>
+              </Field>
+              <Field label="Discovery method">
+                <select
+                  value={method}
+                  onChange={(event) =>
+                    setMethod(event.target.value as "passive" | "ping")
+                  }
+                >
+                  <option value="passive">
+                    Passive neighbor table (recommended)
+                  </option>
+                  <option value="ping">Rate-limited ping sweep</option>
+                </select>
+              </Field>
+              <p>
+                Need a different range? Add and approve it in the Networks
+                section first.
+              </p>
+              <Button onClick={() => setStep(2)}>Review discovery plan</Button>
             </div>
-          </div>
-        )}
-      </div>
+          ) : step === 2 ? (
+            <div className="onboarding-body review-plan">
+              <ShieldCheck />
+              <div>
+                <h3>Discovery boundary</h3>
+                <p>
+                  <strong>Range:</strong> {cidr}
+                </p>
+                <p>
+                  <strong>Method:</strong>{" "}
+                  {method === "passive"
+                    ? "Read the local ARP/neighbour table only"
+                    : "At most 254 hosts, eight checks at a time, 1.5 second timeout"}
+                </p>
+                <p>
+                  <strong>Not performed:</strong> port scanning, login attempts,
+                  public-address scanning, exploitation, or configuration
+                  changes.
+                </p>
+              </div>
+              <div className="onboarding-actions">
+                <Button variant="ghost" onClick={() => setStep(1)}>
+                  Back
+                </Button>
+                <Button onClick={() => setStep(3)}>
+                  I understand—continue
+                </Button>
+              </div>
+            </div>
+          ) : step === 3 ? (
+            <div className="onboarding-body scan-ready">
+              <Radar className={scanning ? "spin" : ""} />
+              <h3>
+                {scanning ? "Discovery in progress" : "Ready to discover"}
+              </h3>
+              <p>
+                The selected operation begins only when you press the button
+                below.
+              </p>
+              {scanError ? <p className="field-error">{scanError}</p> : null}
+              <div className="onboarding-actions">
+                <Button
+                  variant="ghost"
+                  onClick={() => setStep(2)}
+                  disabled={scanning}
+                >
+                  Back
+                </Button>
+                <Button onClick={runDiscovery} disabled={scanning}>
+                  {scanning ? "Checking local network…" : "Run discovery"}
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <div className="onboarding-body">
+              <div className="discovery-results">
+                {results.map((result) => (
+                  <label key={result.ip}>
+                    <input
+                      type="checkbox"
+                      checked={selected.has(result.ip)}
+                      onChange={(event) =>
+                        setSelected((current) => {
+                          const next = new Set(current);
+                          if (event.target.checked) next.add(result.ip);
+                          else next.delete(result.ip);
+                          return next;
+                        })
+                      }
+                    />
+                    <span>
+                      <strong>{result.hostname ?? result.ip}</strong>
+                      <small>
+                        {result.ip} · {result.macAddress ?? "MAC unavailable"} ·{" "}
+                        {result.confidence} confidence
+                      </small>
+                    </span>
+                    <StatusBadge
+                      status={
+                        result.status === "reachable" ? "healthy" : "unknown"
+                      }
+                    />
+                  </label>
+                ))}
+                {results.length === 0 ? (
+                  <div className="empty-discovery">
+                    <Network />
+                    <strong>No neighbors observed</strong>
+                    <p>
+                      Nothing is broken. The approved network may be empty, or
+                      passive discovery may not have enough local information
+                      yet.
+                    </p>
+                  </div>
+                ) : null}
+              </div>
+              <div className="onboarding-actions">
+                <Button variant="ghost" onClick={() => setStep(1)}>
+                  Start over
+                </Button>
+                <Button disabled={busy} onClick={promoteAndActivate}>
+                  {results.length
+                    ? `Add ${selected.size} and activate Live Mode`
+                    : "Activate Live Mode without devices"}
+                </Button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
     </SettingsCard>
   );
 }
@@ -733,6 +784,10 @@ function DataSettings() {
   const { snapshot, mutate, replaceSnapshot, busy } = useApp();
   const fileInput = useRef<HTMLInputElement>(null);
   async function importFile(file: File) {
+    if (file.size > 2 * 1024 * 1024) {
+      window.alert("That backup is larger than the 2 MB safety limit.");
+      return;
+    }
     const text = await file.text();
     let parsed: unknown;
     try {
@@ -752,6 +807,31 @@ function DataSettings() {
       return;
     }
     replaceSnapshot(body);
+  }
+  function exportHostedSession() {
+    const body = JSON.stringify(
+      {
+        version: 1,
+        exportedAt: new Date().toISOString(),
+        data: {
+          devices: snapshot.devices,
+          services: snapshot.services,
+          inventory: snapshot.inventory,
+          notes: snapshot.notes,
+          settings: snapshot.settings,
+        },
+      },
+      null,
+      2,
+    );
+    const url = URL.createObjectURL(
+      new Blob([body], { type: "application/json" }),
+    );
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `homelab-commander-${new Date().toISOString().slice(0, 10)}.json`;
+    link.click();
+    URL.revokeObjectURL(url);
   }
   async function reset() {
     if (
@@ -777,13 +857,19 @@ function DataSettings() {
             <strong>Export portable backup</strong>
             <p>Devices, services, inventory, notes, and non-secret settings.</p>
           </div>
-          <a
-            className="button button-secondary button-default"
-            href="/api/export"
-            download
-          >
-            Export JSON
-          </a>
+          {snapshot.hostedDemo ? (
+            <Button variant="secondary" onClick={exportHostedSession}>
+              Export this tab
+            </Button>
+          ) : (
+            <a
+              className="button button-secondary button-default"
+              href="/api/export"
+              download
+            >
+              Export JSON
+            </a>
+          )}
         </div>
         <div>
           <span>
@@ -792,8 +878,8 @@ function DataSettings() {
           <div>
             <strong>Import backup</strong>
             <p>
-              Validated before replacing matching local data. Existing data is
-              not silently overwritten.
+              Fully validated before replacing matching local data. Imports
+              always return to Demo Mode for a fresh safety review.
             </p>
           </div>
           <input

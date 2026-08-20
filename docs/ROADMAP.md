@@ -9,6 +9,7 @@ The current application is complete for its local-first Demo and foundational Li
 - Device editing beyond notes/tags, including provider ownership and merge resolution.
 - Notification adapters for local email, Slack, or ntfy with explicit secret storage.
 - Saved custom alert thresholds and scheduled maintenance windows.
+- Guided, offline restore drill with explicit database replacement confirmation.
 
 ## Provider expansion
 
@@ -21,7 +22,7 @@ The current application is complete for its local-first Demo and foundational Li
 
 - Authenticated multi-user mode with role-based authorization and attributable audit events.
 - Encrypted credential-reference store backed by the operating-system keychain.
-- Backup scheduling and verified restore drills.
+- Encrypted off-host backup integration and verified restore drills.
 - Desktop packaging and signed auto-updates.
 - Optional evidence-grounded local AI troubleshooting using Ollama, clearly separating observations from hypotheses.
 

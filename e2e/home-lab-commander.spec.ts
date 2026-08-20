@@ -108,6 +108,23 @@ test("toggles color themes", async ({ page }) => {
     .not.toBe(before);
 });
 
+test("visibly opens the guarded Live Mode activation flow", async ({
+  page,
+}) => {
+  await page.goto("/settings?section=live");
+  await expect(
+    page.getByText("Demo Mode is active. Select Live Mode"),
+  ).toBeVisible();
+  await page.getByRole("button", { name: /Live Mode/ }).click();
+  await expect(page.getByText("Activation setup selected")).toBeVisible();
+  await expect(page.getByText("Step 1 of 4")).toBeVisible();
+  await expect(page.getByLabel("Approved private network")).toBeVisible();
+  await expect(page.getByRole("button", { name: /Live Mode/ })).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
+});
+
 test("mobile navigation remains usable", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.getByRole("button", { name: "Open navigation" }).click();

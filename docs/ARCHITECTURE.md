@@ -27,7 +27,8 @@ The app runs in the default Node.js runtime. It does not use the Edge runtime be
 The same application has two explicit runtime profiles:
 
 - **Local** uses `data/homelab.db`, permits guided Live Mode after user approval, and can call bounded local providers.
-- **Hosted Demo** is automatic when `VERCEL=1` or explicit with `HOMELAB_HOSTED_DEMO=1`. It stores SQLite in the runtime temporary directory, forces `settings.mode` to `demo`, and blocks discovery, diagnostics, imports, Docker access, and Live Mode activation.
+- **Hosted Demo** is automatic when `VERCEL=1` or explicit with `HOMELAB_HOSTED_DEMO=1`. The server provides a pristine Demo snapshot, while visitor mutations are reduced and versioned in that browser tab's `sessionStorage`. All server mutation routes, discovery, diagnostics, imports, Docker access, and Live Mode activation fail closed.
+- **Docker Compose** uses the Local application profile with loopback port publishing, persistent database and backup volumes, a hardened non-root application container, and a network-isolated backup sidecar.
 
 Migrations are included in Next.js output tracing because the repository reads them from the filesystem at runtime. Hosted SQLite is showcase state only: serverless cold starts and deployments can replace it.
 
@@ -46,15 +47,17 @@ Migrations are included in Next.js output tracing because the repository reads t
 
 The root Server Component loads a serializable `AppSnapshot` directly from SQLite and passes it into a client context. Demo Mode advances a client-side copy on a deterministic timer so UI telemetry feels alive without continuously writing synthetic samples.
 
-Persistent user changes use `/api/state`. The handler enforces same-origin browser mutations, validates a discriminated Zod action, calls one repository method, and returns a complete fresh snapshot. Import, export, discovery, diagnostics, Docker, and health each use dedicated route handlers.
+Persistent local changes use `/api/state`. The handler enforces same-origin browser mutations, validates a discriminated Zod action, calls one repository method, and returns a complete fresh snapshot. Hosted Demo changes use the same schema and a pure client reducer but never call the mutation endpoint. Import, export, discovery, diagnostics, Docker, and health each use dedicated route handlers.
 
-The hosted policy is evaluated server-side. Client controls explain the boundary, but route handlers remain the security enforcement point.
+The hosted policy is evaluated server-side. Client controls explain the boundary, but route handlers remain the security enforcement point. Versioned browser-tab state exists only for showcase interactivity and is never trusted by a server operation.
 
 ## Database
 
 The schema normalizes devices, interfaces, metrics, services, containers, alerts, events, networks, connections, inventory, notes, and settings. JSON columns are reserved for bounded arrays or flexible metadata, not primary relationships.
 
 SQLite uses WAL mode, foreign keys, a five-second busy timeout, indexed metric/event queries, and transactions for migrations, seeding, import, and Demo reset. Metrics older than the configured raw-retention window are compacted into hourly min/max/average rollups before deletion.
+
+Backups use Node's SQLite online backup API, verify with `PRAGMA integrity_check`, apply owner-only file permissions, and remove only filenames matching the application's versioned backup pattern. Compose runs this in a separate networkless process.
 
 ## Provider model
 
@@ -68,6 +71,8 @@ Provider interfaces expose normalized records:
 - `HealthCheckProvider`
 
 The current implementations are the deterministic Demo provider, local neighbor/ping discovery, predefined local diagnostics, and read-only Docker CLI provider. UI components never parse Docker or OS command output.
+
+See [Provider and remote-agent boundaries](PROVIDER-BOUNDARIES.md) for the deliberately disabled expansion path.
 
 ## Scaling boundary
 

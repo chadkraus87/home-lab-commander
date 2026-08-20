@@ -1,4 +1,5 @@
 import { getStore } from "@/server/store";
+import { log } from "@/server/logger";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -14,6 +15,7 @@ export function GET(): Response {
       generatedAt: snapshot.generatedAt,
     });
   } catch {
+    log("error", "health.database.unavailable");
     return Response.json(
       { status: "unhealthy", message: "The local database is unavailable." },
       { status: 503 },
