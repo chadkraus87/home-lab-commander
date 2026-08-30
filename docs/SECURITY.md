@@ -88,7 +88,7 @@ Compose publishes only `127.0.0.1:3000`, runs the app as a non-root user with a 
 
 Do not include credentials, internal IP inventories, or sensitive logs in public vulnerability reports. Provide a minimal reproduction against Demo Mode when possible.
 
-The most recent recorded review is [Security audit — 2026-08-29](SECURITY-AUDIT.md).
+The most recent recorded review is [Security audit — 2026-08-30](SECURITY-AUDIT.md).
 
 ## Public repository and supply chain
 

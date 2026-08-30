@@ -1,4 +1,4 @@
-# Security audit — 2026-08-29
+# Security audit — 2026-08-30
 
 ## Scope
 
@@ -17,7 +17,7 @@ This audit covered application trust boundaries, client/server separation, mutat
 9. **Discovery promotion could duplicate existing devices.** Results are reconciled by normalized MAC, IP, then hostname; matched records are visibly disabled for promotion.
 10. **Muted dark-theme text missed WCAG AA contrast.** The shared secondary token was raised and an Axe serious/critical gate now covers local and hosted overviews.
 11. **New local integrations needed a strict secret and SSRF boundary.** Provider configuration accepts only indirect `HOMELAB_SECRET_*`/Keychain references; HTTP requests reject public or mixed DNS answers, unapproved ranges, redirects, URL credentials, oversized bodies, and long responses.
-12. **Public portfolio release needed repository-history and supply-chain gates.** Seven tracked commits and all historical Actions logs were scanned; Gitleaks 8.30.1 found no leaks. Tracked media and configuration contain examples only. CodeQL, Dependabot, secret scanning/push protection, scheduled audits, immutable Actions, container scanning, and attested release builds were added.
+12. **Public portfolio release needed repository-history and supply-chain gates.** The complete pre-release history and all historical Actions logs were scanned; Gitleaks 8.30.1 found no leaks. Tracked media and configuration contain examples only. CodeQL, Dependabot, secret scanning/push protection, scheduled audits, immutable Actions, container scanning, and attested release builds were added.
 13. **Docker's build context did not mirror all Git exclusions.** The Docker ignore policy now excludes backups, databases/WAL files, local provider configuration, environment files, keys/certificates, and all Playwright reports before `COPY . .` can create an image layer.
 14. **The release image contained a stale Alpine OpenSSL package.** Docker Scout identified seven fixable high-severity findings in OpenSSL 3.5.7. The shared base stage now applies Alpine security upgrades, and CI/release builds pull the current base before scanning or publishing.
 15. **Local browser QA could attach to an unrelated process on its test port.** The Playwright profile now uses a dedicated port and refuses to reuse an existing server, so a collision fails closed instead of testing the wrong application.
@@ -29,7 +29,7 @@ This audit covered application trust boundaries, client/server separation, mutat
 | -------------------------------------- | -------------------------------------------------------------------------- |
 | Full `npm audit`                       | 0 known vulnerabilities                                                    |
 | Production-only `npm audit --omit=dev` | 0 known vulnerabilities                                                    |
-| Docker Scout image `a4e3ada4c98e`      | 0 critical, high, medium, or low package vulnerabilities                   |
+| Docker Scout final runtime image       | 0 critical, high, medium, or low package vulnerabilities                   |
 | Repository secret-pattern scan         | No credential/private-key material found                                   |
 | ESLint                                 | Passed                                                                     |
 | Strict TypeScript                      | Passed                                                                     |
@@ -43,7 +43,7 @@ This audit covered application trust boundaries, client/server separation, mutat
 | Automated backup                       | Created, mode `0600`, integrity verified, no network in sidecar            |
 | Hosted mutation and discovery probes   | Both rejected with `403`                                                   |
 | Hosted local-operation probes          | Discovery, diagnostics, collector, providers, and Wake-on-LAN rejected 403 |
-| Full tracked Git history (Gitleaks)    | 7 commits scanned; no leaks found                                          |
+| Full tracked Git history (Gitleaks)    | Every release commit scanned; no leaks found                               |
 | Historical Actions-log scan            | No high-confidence secrets or local filesystem paths found                 |
 | Optional access-control probe          | Health `200`; anonymous/wrong credentials `401`; correct credentials `200` |
 

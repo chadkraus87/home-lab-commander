@@ -89,7 +89,7 @@ flowchart LR
 
 The application is a single Node process for a personal homelab. Server Components read the repository directly; narrow route handlers validate mutations and provider operations. UI code consumes normalized domain records instead of Docker-, OS-, or vendor-specific output.
 
-See [Architecture](docs/ARCHITECTURE.md), [Security](docs/SECURITY.md), the [2026-08-29 security audit](docs/SECURITY-AUDIT.md), and [Network discovery](docs/NETWORK-DISCOVERY.md) for the complete boundaries.
+See [Architecture](docs/ARCHITECTURE.md), [Security](docs/SECURITY.md), the [2026-08-30 security audit](docs/SECURITY-AUDIT.md), and [Network discovery](docs/NETWORK-DISCOVERY.md) for the complete boundaries.
 
 ## Run locally
 
