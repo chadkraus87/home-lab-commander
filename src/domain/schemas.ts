@@ -132,13 +132,16 @@ export const discoveryInputSchema = z
 
 export const diagnosticInputSchema = z
   .object({
-    kind: z.enum(["ping", "dns", "tcp", "http"]),
+    kind: z.enum(["ping", "dns", "tcp", "http", "tls"]),
     host: z.string().trim().min(1).max(253),
     port: port.optional(),
     protocol: z.enum(["http", "https"]).optional(),
   })
   .superRefine((value, context) => {
-    if ((value.kind === "tcp" || value.kind === "http") && !value.port)
+    if (
+      (value.kind === "tcp" || value.kind === "http" || value.kind === "tls") &&
+      !value.port
+    )
       context.addIssue({
         code: "custom",
         path: ["port"],

@@ -22,6 +22,7 @@ import {
   TerminalSquare,
   Thermometer,
   Wifi,
+  Zap,
 } from "lucide-react";
 import {
   Area,
@@ -59,6 +60,13 @@ export function DeviceDetailPage({ deviceId }: { deviceId: string }) {
   const [diagnosticOpen, setDiagnosticOpen] = useState(false);
   const [diagnosticBusy, setDiagnosticBusy] = useState(false);
   const [diagnostic, setDiagnostic] = useState<HealthCheckResult | null>(null);
+  const [wakeOpen, setWakeOpen] = useState(false);
+  const [wakeConfirmation, setWakeConfirmation] = useState("");
+  const [wakeCidr, setWakeCidr] = useState(
+    snapshot.settings.approvedCidrs[0] ?? "",
+  );
+  const [wakeMessage, setWakeMessage] = useState("");
+  const [wakeBusy, setWakeBusy] = useState(false);
   const services = snapshot.services.filter(
     (service) => service.deviceId === deviceId,
   );
@@ -128,7 +136,7 @@ export function DeviceDetailPage({ deviceId }: { deviceId: string }) {
     );
   }
 
-  async function runDiagnostic(kind: "ping" | "dns" | "tcp" | "http") {
+  async function runDiagnostic(kind: "ping" | "dns" | "tcp" | "http" | "tls") {
     setDiagnosticBusy(true);
     setDiagnostic(null);
     const linkedService = services[0];
@@ -140,7 +148,7 @@ export function DeviceDetailPage({ deviceId }: { deviceId: string }) {
           kind,
           host: device?.primaryIp,
           port:
-            kind === "tcp" || kind === "http"
+            kind === "tcp" || kind === "http" || kind === "tls"
               ? (linkedService?.port ?? 80)
               : undefined,
           protocol:
@@ -171,6 +179,34 @@ export function DeviceDetailPage({ deviceId }: { deviceId: string }) {
       });
     } finally {
       setDiagnosticBusy(false);
+    }
+  }
+
+  async function wakeDevice() {
+    setWakeBusy(true);
+    setWakeMessage("");
+    try {
+      const response = await fetch("/api/wake", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          deviceId,
+          cidr: wakeCidr,
+          confirmation: wakeConfirmation,
+        }),
+      });
+      const body = (await response.json()) as {
+        message?: string;
+        error?: string;
+      };
+      if (!response.ok) throw new Error(body.error ?? "Wake-on-LAN failed.");
+      setWakeMessage(body.message ?? "Wake packet sent.");
+    } catch (error) {
+      setWakeMessage(
+        error instanceof Error ? error.message : "Wake-on-LAN failed.",
+      );
+    } finally {
+      setWakeBusy(false);
     }
   }
 
@@ -217,6 +253,12 @@ export function DeviceDetailPage({ deviceId }: { deviceId: string }) {
             <TerminalSquare size={14} />
             Diagnostics
           </Button>
+          {snapshot.settings.mode === "live" && device.source !== "demo" ? (
+            <Button variant="secondary" onClick={() => setWakeOpen(true)}>
+              <Zap size={14} />
+              Wake device
+            </Button>
+          ) : null}
           <Button onClick={() => setEditOpen(true)}>
             <Edit3 size={14} />
             Edit notes
@@ -512,6 +554,50 @@ export function DeviceDetailPage({ deviceId }: { deviceId: string }) {
         </div>
       </Modal>
       <Modal
+        open={wakeOpen}
+        onClose={() => {
+          setWakeOpen(false);
+          setWakeConfirmation("");
+          setWakeMessage("");
+        }}
+        title={`Wake ${device.displayName}`}
+        description="This sends one standard Wake-on-LAN magic packet. It never runs automatically."
+      >
+        <div className="form-grid">
+          <Field label="Approved network">
+            <select
+              value={wakeCidr}
+              onChange={(event) => setWakeCidr(event.target.value)}
+            >
+              {snapshot.settings.approvedCidrs.map((cidr) => (
+                <option key={cidr}>{cidr}</option>
+              ))}
+            </select>
+          </Field>
+          <Field label={`Type WAKE ${device.hostname} to confirm`}>
+            <input
+              value={wakeConfirmation}
+              onChange={(event) => setWakeConfirmation(event.target.value)}
+              autoComplete="off"
+            />
+          </Field>
+        </div>
+        {wakeMessage ? <p role="status">{wakeMessage}</p> : null}
+        <div className="form-actions">
+          <Button variant="ghost" onClick={() => setWakeOpen(false)}>
+            Cancel
+          </Button>
+          <Button
+            disabled={
+              wakeBusy || wakeConfirmation !== `WAKE ${device.hostname}`
+            }
+            onClick={wakeDevice}
+          >
+            <Zap size={14} /> {wakeBusy ? "Sending…" : "Send one wake packet"}
+          </Button>
+        </div>
+      </Modal>
+      <Modal
         open={diagnosticOpen}
         onClose={() => {
           setDiagnosticOpen(false);
@@ -548,6 +634,13 @@ export function DeviceDetailPage({ deviceId }: { deviceId: string }) {
             onClick={() => runDiagnostic("http")}
           >
             HTTP check
+          </Button>
+          <Button
+            variant="secondary"
+            disabled={diagnosticBusy}
+            onClick={() => runDiagnostic("tls")}
+          >
+            TLS certificate
           </Button>
         </div>
         {diagnosticBusy ? (

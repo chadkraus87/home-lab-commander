@@ -17,11 +17,17 @@ import {
   hostedSessionStorageKey,
   parseHostedSession,
 } from "@/simulation/hosted-state";
+import {
+  applyDemoScenario,
+  demoScenarioIds,
+  type DemoScenarioId,
+} from "@/simulation/scenarios";
 
 interface AppContextValue {
   snapshot: AppSnapshot;
   mutate: (payload: unknown, successMessage?: string) => Promise<boolean>;
   replaceSnapshot: (snapshot: AppSnapshot) => void;
+  loadDemoScenario: (scenario: DemoScenarioId) => void;
   busy: boolean;
   toast: { message: string; tone: "success" | "error" } | null;
   dismissToast: () => void;
@@ -40,16 +46,22 @@ export function AppProvider({
   const [busy, setBusy] = useState(false);
   const [toast, setToast] = useState<AppContextValue["toast"]>(null);
   const tick = useRef(0);
+  const pristineSnapshot = useRef(initialSnapshot);
 
   useEffect(() => {
     if (!initialSnapshot.hostedDemo) return;
     const timeout = window.setTimeout(() => {
       try {
+        const requested = new URLSearchParams(window.location.search).get(
+          "scenario",
+        );
         setSnapshot(
-          parseHostedSession(
-            window.sessionStorage.getItem(hostedSessionStorageKey),
-            initialSnapshot,
-          ),
+          demoScenarioIds.includes(requested as DemoScenarioId)
+            ? applyDemoScenario(initialSnapshot, requested as DemoScenarioId)
+            : parseHostedSession(
+                window.sessionStorage.getItem(hostedSessionStorageKey),
+                initialSnapshot,
+              ),
         );
       } catch {
         setToast({
@@ -133,16 +145,41 @@ export function AppProvider({
     [snapshot],
   );
 
+  const replaceSnapshot = useCallback((next: AppSnapshot) => {
+    setSnapshot(next);
+    if (!next.hostedDemo) return;
+    try {
+      window.sessionStorage.setItem(
+        hostedSessionStorageKey,
+        JSON.stringify(next),
+      );
+    } catch {
+      setToast({
+        message:
+          "Demo state changed, but browser session storage is unavailable.",
+        tone: "error",
+      });
+    }
+  }, []);
+
+  const loadDemoScenario = useCallback(
+    (scenario: DemoScenarioId) => {
+      replaceSnapshot(applyDemoScenario(pristineSnapshot.current, scenario));
+    },
+    [replaceSnapshot],
+  );
+
   const value = useMemo<AppContextValue>(
     () => ({
       snapshot,
       mutate,
-      replaceSnapshot: setSnapshot,
+      replaceSnapshot,
+      loadDemoScenario,
       busy,
       toast,
       dismissToast: () => setToast(null),
     }),
-    [snapshot, mutate, busy, toast],
+    [snapshot, mutate, replaceSnapshot, loadDemoScenario, busy, toast],
   );
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
 }

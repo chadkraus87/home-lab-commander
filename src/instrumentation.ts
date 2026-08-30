@@ -1,6 +1,6 @@
 import type { Instrumentation } from "next";
 
-export function register(): void {
+export async function register(): Promise<void> {
   if (process.env.NEXT_RUNTIME !== "nodejs") return;
   writeLog("info", "application.started", {
     deployment:
@@ -9,6 +9,14 @@ export function register(): void {
         : "local",
     version: process.env.npm_package_version ?? "unknown",
   });
+  if (
+    process.env.HOMELAB_HOSTED_DEMO !== "1" &&
+    process.env.VERCEL !== "1" &&
+    process.env.HOMELAB_COLLECTOR_ENABLED === "1"
+  ) {
+    const { startCollector } = await import("@/server/collector");
+    startCollector();
+  }
 }
 
 export const onRequestError: Instrumentation.onRequestError = (

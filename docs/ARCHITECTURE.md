@@ -16,6 +16,10 @@ flowchart LR
   POLICY --> DISCOVERY["Discovery provider"]
   POLICY --> HEALTH["Health-check provider"]
   API --> DOCKER["Read-only Docker provider"]
+  INST["Node instrumentation"] --> COLLECTOR["Opt-in collector"]
+  COLLECTOR --> POLICY
+  COLLECTOR --> REPO
+  POLICY --> PROVIDERS["Secret-reference providers"]
   DEMO["Deterministic demo engine"] --> UI
   REPO --> DB[("Local SQLite")]
 ```
@@ -27,7 +31,7 @@ The app runs in the default Node.js runtime. It does not use the Edge runtime be
 The same application has two explicit runtime profiles:
 
 - **Local** uses `data/homelab.db`, permits guided Live Mode after user approval, and can call bounded local providers.
-- **Hosted Demo** is automatic when `VERCEL=1` or explicit with `HOMELAB_HOSTED_DEMO=1`. The server provides a pristine Demo snapshot, while visitor mutations are reduced and versioned in that browser tab's `sessionStorage`. All server mutation routes, discovery, diagnostics, imports, Docker access, and Live Mode activation fail closed.
+- **Hosted Demo** is automatic when `VERCEL=1` or explicit with `HOMELAB_HOSTED_DEMO=1`. The server provides a pristine Demo snapshot, while visitor mutations are reduced and versioned in that browser tab's `sessionStorage`. All server mutation routes, discovery, diagnostics, imports, Docker, provider, collector, Wake-on-LAN, and Live Mode activation fail closed.
 - **Docker Compose** uses the Local application profile with loopback port publishing, persistent database and backup volumes, a hardened non-root application container, and a network-isolated backup sidecar.
 
 Migrations are included in Next.js output tracing because the repository reads them from the filesystem at runtime. Hosted SQLite is showcase state only: serverless cold starts and deployments can replace it.
@@ -70,10 +74,12 @@ Provider interfaces expose normalized records:
 - `NetworkDiscoveryProvider`
 - `HealthCheckProvider`
 
-The current implementations are the deterministic Demo provider, local neighbor/ping discovery, predefined local diagnostics, and read-only Docker CLI provider. UI components never parse Docker or OS command output.
+The current implementations are the deterministic Demo provider, local neighbor/ping discovery, predefined local diagnostics, read-only Docker CLI provider, and a registry for Prometheus, Proxmox, UniFi, Home Assistant, SNMP, NUT, Tailscale, and SMART. The registry stores no secret values; it resolves approved environment or macOS Keychain references only on the server. UI components never parse Docker, provider, or OS command output.
+
+The optional collector starts from Node instrumentation only for local runtimes. It remains idle until settings report Live Mode, clamps cadence, batches four checks, records service transitions through a separate short-lived SQLite repository, and invokes enabled providers through the same private-range policy. No browser needs to remain open.
 
 See [Provider and remote-agent boundaries](PROVIDER-BOUNDARIES.md) for the deliberately disabled expansion path.
 
 ## Scaling boundary
 
-This release targets one trusted local operator and one process. A multi-user or multi-instance deployment would require authentication, authorization, audit identity, a shared database, shared cache invalidation, background collectors, and stronger cross-host secret management. Those concerns are deliberately outside the current local-first boundary.
+This release targets one trusted local operator and one process. A multi-user or multi-instance deployment would require authentication, authorization, audit identity, a shared database, shared cache invalidation, distributed collectors, and stronger cross-host secret management. Those concerns are deliberately outside the current local-first boundary.

@@ -21,9 +21,14 @@
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "test:e2e": "playwright test",
+    "test:e2e:hosted": "playwright test --config=playwright.hosted.config.ts",
+    "performance:budget": "node scripts/check-bundle-budget.mjs",
     "audit:browser": "node scripts/browser-audit.mjs",
     "backup": "node scripts/backup-database.mjs",
     "backup:verify": "node scripts/verify-backup.mjs",
+    "restore:drill": "node scripts/restore-drill.mjs",
+    "restore": "node scripts/restore-database.mjs",
+    "remote:check": "node scripts/check-remote-access.mjs",
     "media:capture": "node scripts/capture-readme-media.mjs",
     "format": "prettier --write .",
     "format:check": "prettier --check ."
@@ -45,6 +50,7 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.13.0",
     "@playwright/test": "^1.62.1",
     "@tailwindcss/postcss": "^4",
     "@testing-library/jest-dom": "^7.0.1",

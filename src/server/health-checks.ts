@@ -3,6 +3,7 @@ import "server-only";
 import { execFile } from "node:child_process";
 import { lookup } from "node:dns/promises";
 import { createConnection } from "node:net";
+import { connect as tlsConnect } from "node:tls";
 import { promisify } from "node:util";
 import { isAllowedLocalAddress } from "@/domain/network";
 import type {
@@ -38,8 +39,77 @@ export class SafeHealthCheckProvider implements HealthCheckProvider {
     if (input.kind === "ping") return ping(address);
     if (!input.port) throw new Error("A port is required for this diagnostic.");
     if (input.kind === "tcp") return tcp(address, input.port);
+    if (input.kind === "tls")
+      return tlsCertificate(address, input.host, input.port);
     return http(address, input.host, input.port, input.protocol ?? "http");
   }
+}
+
+async function tlsCertificate(
+  address: string,
+  hostname: string,
+  port: number,
+): Promise<HealthCheckResult> {
+  const started = performance.now();
+  return new Promise((resolve) => {
+    const socket = tlsConnect({
+      host: address,
+      port,
+      servername: isAllowedLocalAddress(hostname) ? undefined : hostname,
+      rejectUnauthorized: false,
+    });
+    socket.setTimeout(3_000);
+    socket.once("secureConnect", () => {
+      const certificate = socket.getPeerCertificate();
+      const validTo = Date.parse(certificate.valid_to ?? "");
+      const days = Number.isFinite(validTo)
+        ? Math.floor((validTo - Date.now()) / 86_400_000)
+        : null;
+      const authorized = socket.authorized;
+      socket.destroy();
+      const ok = days !== null && days >= 14 && authorized;
+      resolve({
+        ok,
+        kind: "tls",
+        latencyMs: performance.now() - started,
+        message:
+          days === null
+            ? "The peer did not provide a readable TLS certificate."
+            : `TLS certificate expires in ${days} day${days === 1 ? "" : "s"}.`,
+        observed: [
+          days === null
+            ? "Certificate expiration unavailable"
+            : `Valid until ${certificate.valid_to}`,
+          authorized
+            ? "Certificate chain trusted by this host"
+            : `Certificate chain not trusted: ${socket.authorizationError ?? "unknown reason"}`,
+        ],
+        likelyExplanation: ok
+          ? null
+          : days !== null && days < 14
+            ? "The certificate is expired or inside the 14-day renewal window."
+            : "The local host does not trust the certificate chain.",
+        recommendation: ok
+          ? "No action is needed."
+          : "Renew the certificate if needed and verify the local trust chain before relying on this endpoint.",
+      });
+    });
+    const fail = () => {
+      socket.destroy();
+      resolve({
+        ok: false,
+        kind: "tls",
+        latencyMs: null,
+        message: "A TLS handshake could not be completed.",
+        observed: ["No certificate was received before timeout"],
+        likelyExplanation:
+          "The service may not use TLS on this port or may be unavailable.",
+        recommendation: "Confirm the HTTPS port and service state.",
+      });
+    };
+    socket.once("timeout", fail);
+    socket.once("error", fail);
+  });
 }
 
 async function resolveAllowed(host: string): Promise<string[]> {

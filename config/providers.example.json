@@ -1,0 +1,71 @@
+{
+  "version": 1,
+  "providers": [
+    {
+      "id": "prometheus-main",
+      "label": "Prometheus",
+      "kind": "prometheus",
+      "endpoint": "http://192.168.10.10:9090",
+      "secretRef": "env:HOMELAB_SECRET_PROMETHEUS_TOKEN",
+      "allowSelfSigned": false,
+      "enabled": false
+    },
+    {
+      "id": "proxmox-cluster",
+      "label": "Proxmox",
+      "kind": "proxmox",
+      "endpoint": "https://192.168.10.11:8006",
+      "secretRef": "keychain:homelab-commander/proxmox-cluster",
+      "allowSelfSigned": true,
+      "enabled": false
+    },
+    {
+      "id": "home-assistant",
+      "label": "Home Assistant",
+      "kind": "home-assistant",
+      "endpoint": "http://192.168.10.10:8123",
+      "secretRef": "keychain:homelab-commander/home-assistant",
+      "allowSelfSigned": false,
+      "enabled": false
+    },
+    {
+      "id": "unifi",
+      "label": "UniFi Network",
+      "kind": "unifi",
+      "endpoint": "https://192.168.10.1",
+      "secretRef": "keychain:homelab-commander/unifi",
+      "allowSelfSigned": true,
+      "enabled": false
+    },
+    {
+      "id": "ups",
+      "label": "Network UPS Tools",
+      "kind": "nut",
+      "host": "192.168.10.12",
+      "upsName": "ups",
+      "enabled": false
+    },
+    {
+      "id": "network-snmp",
+      "label": "SNMP system identity",
+      "kind": "snmp",
+      "host": "192.168.10.2",
+      "communityRef": "keychain:homelab-commander/snmp-network",
+      "oid": "1.3.6.1.2.1.1.1.0",
+      "enabled": false
+    },
+    {
+      "id": "tailscale-local",
+      "label": "Tailscale",
+      "kind": "tailscale",
+      "enabled": false
+    },
+    {
+      "id": "smart-local",
+      "label": "SMART disk health",
+      "kind": "smart",
+      "devices": ["/dev/disk0"],
+      "enabled": false
+    }
+  ]
+}

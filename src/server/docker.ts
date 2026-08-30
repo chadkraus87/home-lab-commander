@@ -17,6 +17,12 @@ interface DockerRow {
   Ports: string;
 }
 
+interface DockerStatsRow {
+  ID: string;
+  CPUPerc: string;
+  MemUsage: string;
+}
+
 export class DockerCliProvider implements ContainerProvider {
   readonly id = "docker-cli";
 
@@ -40,6 +46,7 @@ export class DockerCliProvider implements ContainerProvider {
       ["ps", "-a", "--no-trunc", "--format", "{{json .}}"],
       { timeout: 5_000, maxBuffer: 1_000_000 },
     );
+    const stats = await this.readStats();
     return stdout
       .split("\n")
       .filter(Boolean)
@@ -53,7 +60,45 @@ export class DockerCliProvider implements ContainerProvider {
           status: row.Status,
           ports: row.Ports,
           hostDeviceId: "local-docker-host",
+          cpu: parsePercent(stats.get(row.ID)?.CPUPerc),
+          memory: parseMemoryMb(stats.get(row.ID)?.MemUsage),
         }),
       );
   }
+
+  private async readStats(): Promise<Map<string, DockerStatsRow>> {
+    try {
+      const { stdout } = await execFileAsync(
+        "docker",
+        ["stats", "--no-stream", "--format", "{{json .}}"],
+        { timeout: 6_000, maxBuffer: 1_000_000 },
+      );
+      return new Map(
+        stdout
+          .split("\n")
+          .filter(Boolean)
+          .map((line) => JSON.parse(line) as DockerStatsRow)
+          .map((row) => [row.ID, row]),
+      );
+    } catch {
+      return new Map();
+    }
+  }
+}
+
+function parsePercent(value: string | undefined): number {
+  const parsed = Number(value?.replace("%", ""));
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function parseMemoryMb(value: string | undefined): number {
+  const used = value?.split("/", 1)[0]?.trim();
+  const match = used?.match(/^([\d.]+)([KMG]i?B)$/i);
+  if (!match) return 0;
+  const amount = Number(match[1]);
+  const unit = match[2]?.toLowerCase();
+  if (!Number.isFinite(amount)) return 0;
+  if (unit?.startsWith("g")) return amount * 1024;
+  if (unit?.startsWith("k")) return amount / 1024;
+  return amount;
 }

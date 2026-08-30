@@ -1,5 +1,6 @@
 FROM node:24-alpine AS base
 ENV NEXT_TELEMETRY_DISABLED=1
+RUN apk upgrade --no-cache
 
 FROM base AS dependencies
 WORKDIR /app

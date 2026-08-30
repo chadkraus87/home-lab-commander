@@ -32,12 +32,22 @@ Some local observations require `arp`, `ip`, `ping`, or `docker`. Each is called
 - TCP and HTTP checks have short timeouts.
 - Active discovery runs at eight hosts per batch and is rate-limited to once every 30 seconds per process.
 - Passive discovery reads only the host neighbor table.
+- Discovery results are reconciled by normalized MAC, IP, then hostname before the UI offers new-device promotion.
+- Automated service/provider checks run only in Live Mode, inside the saved CIDR allowlist, at a minimum 30-second cadence and four concurrent targets.
 
 These controls reduce risk; they do not turn the app into a security boundary against a malicious local administrator.
 
 ## Docker
 
-The Docker provider runs only `docker info` and `docker ps -a` with fixed formatting. The application does not mount the Docker socket by default. A Docker socket provides host-level administrative power even if mounted read-only; enable it only on a trusted host and never expose the app to untrusted users.
+The Docker provider runs only `docker info`, `docker ps -a`, and one-shot `docker stats --no-stream` with fixed formatting. Container logs and lifecycle actions are deliberately excluded. The application does not mount the Docker socket by default. A Docker socket provides host-level administrative power even if mounted read-only; enable it only on a trusted host and never expose the app to untrusted users.
+
+## Providers, collector, and actions
+
+The ignored provider registry is strict-schema validated, contains only configuration and indirect secret references, and is redacted before browser delivery. Environment references must start with `HOMELAB_SECRET_`; Keychain resolution uses fixed `security find-generic-password` arguments on macOS. HTTP provider requests reject userinfo, redirects, public/mixed DNS answers, targets outside approved CIDRs, responses over 64 KB, and requests beyond four seconds. Self-signed certificates require explicit per-provider opt-in.
+
+The collector does not start on Vercel and remains idle in Demo Mode. It records only normalized status transitions, deduplicated alert fingerprints, and non-secret metadata. Slack webhooks are restricted to `https://hooks.slack.com`; self-hosted ntfy must resolve into the local allowlist. Notification failures are isolated.
+
+TLS inspection connects only after the same approved-target resolution. Wake-on-LAN sends one standard UDP magic packet to an approved `/24`-or-smaller broadcast only after exact typed confirmation for a stored non-demo device. No background or bulk wake operation exists.
 
 ## Data and secrets
 
@@ -62,6 +72,7 @@ Vercel deployments fail closed into Hosted Demo, even if no custom environment v
 - rejects private-network discovery and diagnostics;
 - rejects portable imports;
 - never invokes the Docker provider.
+- rejects collector, provider, and Wake-on-LAN endpoints before they touch local adapters.
 
 Browser-local Demo mutations, reset, and export remain available so visitors can explore the workflow. A global notice tells visitors to use example data only. State disappears when the tab closes, and a warm serverless instance cannot share it with another visitor. A persistent public edition would require authenticated users, per-tenant authorization, durable managed storage, audit identity, and a separately authenticated local agent.
 
@@ -77,4 +88,10 @@ Compose publishes only `127.0.0.1:3000`, runs the app as a non-root user with a 
 
 Do not include credentials, internal IP inventories, or sensitive logs in public vulnerability reports. Provide a minimal reproduction against Demo Mode when possible.
 
-The most recent recorded review is [Security audit — 2026-08-20](SECURITY-AUDIT.md).
+The most recent recorded review is [Security audit — 2026-08-29](SECURITY-AUDIT.md).
+
+## Public repository and supply chain
+
+Repository visibility does not publish ignored runtime files, Docker volumes, environment variables, Keychain items, or a loopback service. Before the public transition, all tracked history and historical Actions logs were scanned for high-confidence secrets and local paths; Gitleaks 8.30.1 found no leaks across all commits. Tracked media contains deterministic demo infrastructure only.
+
+Continuing controls include GitHub secret scanning and push protection, private vulnerability reporting, Dependabot for npm/Docker/Actions, CodeQL, scheduled production dependency audits, Trivy container scans, immutable action SHAs, and tagged GHCR builds with GitHub provenance/SBOM attestations. Install scripts remain fail-closed through npm's strict allowlist.

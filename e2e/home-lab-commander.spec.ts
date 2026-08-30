@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import AxeBuilder from "@axe-core/playwright";
 
 test.beforeEach(async ({ page }) => {
   await page.goto("/");
@@ -134,4 +135,13 @@ test("mobile navigation remains usable", async ({ page }) => {
   await expect(navigation).toBeVisible();
   await navigation.getByRole("link", { name: "Devices", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Devices" })).toBeVisible();
+});
+
+test("overview has no serious accessibility violations", async ({ page }) => {
+  const results = await new AxeBuilder({ page }).analyze();
+  expect(
+    results.violations.filter((violation) =>
+      ["serious", "critical"].includes(violation.impact ?? ""),
+    ),
+  ).toEqual([]);
 });

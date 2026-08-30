@@ -9,6 +9,7 @@ services:
       - "127.0.0.1:3000:3000"
     volumes:
       - homelab-data:/app/data
+      - ./config:/app/config:ro
     tmpfs:
       - /tmp:rw,noexec,nosuid,size=64m
     environment:
@@ -16,6 +17,12 @@ services:
       HOMELAB_DATABASE_PATH: /app/data/homelab.db
       HOMELAB_ACCESS_USERNAME: ${HOMELAB_ACCESS_USERNAME:-homelab}
       HOMELAB_ACCESS_TOKEN: ${HOMELAB_ACCESS_TOKEN:-}
+      HOMELAB_COLLECTOR_ENABLED: ${HOMELAB_COLLECTOR_ENABLED:-1}
+      HOMELAB_COLLECTOR_INTERVAL_SECONDS: ${HOMELAB_COLLECTOR_INTERVAL_SECONDS:-60}
+      HOMELAB_PROVIDER_CONFIG_PATH: /app/config/providers.json
+      HOMELAB_NTFY_URL: ${HOMELAB_NTFY_URL:-}
+      HOMELAB_NTFY_TOKEN_REF: ${HOMELAB_NTFY_TOKEN_REF:-}
+      HOMELAB_SLACK_WEBHOOK_REF: ${HOMELAB_SLACK_WEBHOOK_REF:-}
     cap_drop:
       - ALL
     security_opt:

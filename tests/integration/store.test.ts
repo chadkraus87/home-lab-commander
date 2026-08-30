@@ -17,7 +17,7 @@ describe("SQLite integration workflows", () => {
     const directory = mkdtempSync(join(tmpdir(), "homelab-commander-"));
     directories.push(directory);
     const path = join(directory, "test.db");
-    const store = new AppStore(path);
+    const store = new AppStore(path, true);
     expect(store.snapshot().settings.mode).toBe("demo");
     const updated = store.addDevice({
       displayName: "Test Server",
@@ -31,7 +31,7 @@ describe("SQLite integration workflows", () => {
       updated.devices.some((device) => device.primaryIp === "192.168.10.99"),
     ).toBe(true);
     store.close();
-    const reopened = new AppStore(path);
+    const reopened = new AppStore(path, true);
     expect(
       reopened
         .snapshot()
@@ -43,7 +43,7 @@ describe("SQLite integration workflows", () => {
   it("supports service, alert, note, inventory, and reset workflows", () => {
     const directory = mkdtempSync(join(tmpdir(), "homelab-commander-"));
     directories.push(directory);
-    const store = new AppStore(join(directory, "test.db"));
+    const store = new AppStore(join(directory, "test.db"), true);
     expect(
       store
         .addService({

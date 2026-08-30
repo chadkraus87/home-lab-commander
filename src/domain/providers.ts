@@ -37,7 +37,7 @@ export interface NetworkDiscoveryProvider {
 
 export interface HealthCheckResult {
   ok: boolean;
-  kind: "ping" | "dns" | "tcp" | "http";
+  kind: "ping" | "dns" | "tcp" | "http" | "tls";
   latencyMs: number | null;
   message: string;
   observed: string[];

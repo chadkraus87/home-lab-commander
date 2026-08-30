@@ -7,7 +7,8 @@
 A local-first operations console for discovering, monitoring, organizing, documenting, and troubleshooting a personally owned homelab.
 
 [![Live Demo](https://img.shields.io/badge/Live_Demo-Open-5aa7ff?style=for-the-badge&logo=vercel&logoColor=white)](https://home-lab-commander.vercel.app)
-[![CI](https://img.shields.io/badge/CI-GitHub_Actions-2088FF?style=for-the-badge&logo=githubactions&logoColor=white)](https://github.com/chadkraus87/home-lab-commander/actions/workflows/ci.yml)
+[![CI](https://github.com/chadkraus87/home-lab-commander/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/chadkraus87/home-lab-commander/actions/workflows/ci.yml)
+[![CodeQL](https://github.com/chadkraus87/home-lab-commander/actions/workflows/codeql.yml/badge.svg?branch=main)](https://github.com/chadkraus87/home-lab-commander/actions/workflows/codeql.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-56d39a?style=for-the-badge)](LICENSE)
 
 ![HomeLab Commander overview](docs/screenshots/overview.png)
@@ -29,8 +30,13 @@ The hosted deployment is intentionally different from a local installation:
 | Portable JSON import                                      |      —      |            ✓            |
 | Private-network discovery and diagnostics                 |      —      | ✓, approved ranges only |
 | Read-only local Docker inventory                          |      —      |        ✓, opt-in        |
+| Guided tour and incident scenario playback                |      ✓      |            ✓            |
+| Background service/provider collector                     |      —      |        ✓, opt-in        |
+| Provider health, TLS expiry, and Wake-on-LAN              |      —      | ✓, explicit boundaries  |
 
 Vercel cannot reach a visitor's private network, and the hosted build does not try. Hosted edits are kept in that visitor's browser tab, never written to a shared server database, and reset when the tab closes. Run locally for persistent state and Live Mode.
+
+Try a shareable portfolio flow: [open the guided outage scenario](https://home-lab-commander.vercel.app/?scenario=outage&tour=1), follow the incident across the command center and device view, then choose **Recovery** from the scenario control. All devices, addresses, alerts, and events in the hosted showcase are deterministic examples.
 
 ## Product tours
 
@@ -55,6 +61,9 @@ The media is reproducible: start the hosted-demo profile locally, then run `npm 
 - **Network topology** — interactive XYFlow graph with filtering, detail panels, minimap, pan/zoom, automatic layout, and browser-saved positions.
 - **Service monitoring** — normalized HTTP, HTTPS, TCP, and DNS monitors with response time and availability history.
 - **Container visibility** — read-only Docker detection and normalized state, with a complete simulated runtime when Docker is absent.
+- **Local integrations** — secret-reference provider checks for Prometheus, Proxmox, UniFi, Home Assistant, NUT, SNMP, Tailscale, and SMART.
+- **Bounded collection** — an opt-in Live Mode collector records service transitions, deduplicates alerts, and can deliver self-hosted ntfy or Slack notifications.
+- **Operator actions** — TLS certificate-expiry checks and one-shot Wake-on-LAN with approved-range and exact typed confirmation gates.
 - **Monitoring and alerts** — historical charts, retention and rollups, alert fingerprints, acknowledgement, resolution, and history.
 - **Inventory and knowledge** — hardware records plus fast Markdown lab notes with GitHub Flavored Markdown preview.
 - **Fast navigation** — unified `⌘ K` / `Ctrl K` infrastructure search and command palette.
@@ -80,7 +89,7 @@ flowchart LR
 
 The application is a single Node process for a personal homelab. Server Components read the repository directly; narrow route handlers validate mutations and provider operations. UI code consumes normalized domain records instead of Docker-, OS-, or vendor-specific output.
 
-See [Architecture](docs/ARCHITECTURE.md), [Security](docs/SECURITY.md), the [2026-08-20 security audit](docs/SECURITY-AUDIT.md), and [Network discovery](docs/NETWORK-DISCOVERY.md) for the complete boundaries.
+See [Architecture](docs/ARCHITECTURE.md), [Security](docs/SECURITY.md), the [2026-08-29 security audit](docs/SECURITY-AUDIT.md), and [Network discovery](docs/NETWORK-DISCOVERY.md) for the complete boundaries.
 
 ## Run locally
 
@@ -103,7 +112,7 @@ npm install
 npm run dev
 ```
 
-Open [http://127.0.0.1:3000](http://127.0.0.1:3000). The first request creates `data/homelab.db`, applies append-only migrations, and seeds the Demo Environment. Stop the server with `Ctrl C`.
+Open [http://127.0.0.1:3000](http://127.0.0.1:3000). The first request creates an empty `data/homelab.db` and applies append-only migrations; choose **Settings → Data → Reset Demo** if you want the example lab. Hosted deployments and automated demo tests seed examples explicitly. Stop the server with `Ctrl C`.
 
 Development and production scripts bind to loopback by default. Override the hostname only when you deliberately intend to expose the application to a trusted LAN.
 
@@ -125,6 +134,8 @@ docker compose logs -f homelab-commander
 ```
 
 The Compose profile is suitable for an always-on, loopback-only installation. It uses a non-root, read-only application container with dropped capabilities, `no-new-privileges`, resource limits, health checks, log rotation, persistent `homelab-data`, and a network-isolated daily backup sidecar retaining 14 verified snapshots in `homelab-backups`.
+
+Compose also enables the collector, but it remains idle until you explicitly activate Live Mode. Local provider configuration is mounted read-only from `config/`; copy `config/providers.example.json` to the ignored `config/providers.json` and keep actual credentials in `HOMELAB_SECRET_*` environment variables or macOS Keychain references.
 
 On macOS, Docker Desktop's network namespace can limit passive neighbor discovery, and the app intentionally does not mount the host Docker socket. Use the native production process when complete host-LAN discovery and read-only host Docker inventory matter; use Docker when isolation, restart behavior, and manual records/diagnostics matter more. See [Operations](docs/OPERATIONS.md) for startup, backup, access-control, and recovery guidance.
 
@@ -154,18 +165,26 @@ Public ranges, unapproved private ranges, and discovery requests larger than one
 
 Live Mode pauses simulated telemetry and enables local tools on demand; it does not invent live metrics or silently poll your network. Seed records remain clearly marked as simulated until you replace or supplement them with manual/discovered records.
 
+If `HOMELAB_COLLECTOR_ENABLED=1`, the collector starts only after the local app enters Live Mode. Its interval is clamped to 30–3,600 seconds, checks at most four targets concurrently, and evaluates only manual services and enabled providers inside approved ranges. Open **Settings → Integrations** to inspect status, test one provider, or request a run.
+
 ## Configuration
 
-| Variable                        | Purpose                                                 | Default                          |
-| ------------------------------- | ------------------------------------------------------- | -------------------------------- |
-| `HOMELAB_DATABASE_PATH`         | Absolute SQLite database location                       | `data/homelab.db`                |
-| `HOMELAB_HOSTED_DEMO=1`         | Force the demo-only hosted safety profile               | Off locally; automatic on Vercel |
-| `HOMELAB_STANDALONE=1`          | Produce Next.js standalone output for the Docker image  | Off                              |
-| `HOMELAB_ACCESS_USERNAME`       | Optional single-operator HTTP Basic username            | `homelab`                        |
-| `HOMELAB_ACCESS_TOKEN`          | Optional access token; minimum 24 characters            | Disabled                         |
-| `HOMELAB_BACKUP_DIRECTORY`      | Native backup destination                               | `backups`                        |
-| `HOMELAB_BACKUP_RETENTION`      | Number of verified SQLite backups retained              | `14`                             |
-| `HOMELAB_BACKUP_INTERVAL_HOURS` | Docker backup-sidecar interval, from 0.25 through 168 h | `24`                             |
+| Variable                             | Purpose                                                 | Default                          |
+| ------------------------------------ | ------------------------------------------------------- | -------------------------------- |
+| `HOMELAB_DATABASE_PATH`              | Absolute SQLite database location                       | `data/homelab.db`                |
+| `HOMELAB_HOSTED_DEMO=1`              | Force the demo-only hosted safety profile               | Off locally; automatic on Vercel |
+| `HOMELAB_STANDALONE=1`               | Produce Next.js standalone output for the Docker image  | Off                              |
+| `HOMELAB_ACCESS_USERNAME`            | Optional single-operator HTTP Basic username            | `homelab`                        |
+| `HOMELAB_ACCESS_TOKEN`               | Optional access token; minimum 24 characters            | Disabled                         |
+| `HOMELAB_BACKUP_DIRECTORY`           | Native backup destination                               | `backups`                        |
+| `HOMELAB_BACKUP_RETENTION`           | Number of verified SQLite backups retained              | `14`                             |
+| `HOMELAB_BACKUP_INTERVAL_HOURS`      | Docker backup-sidecar interval, from 0.25 through 168 h | `24`                             |
+| `HOMELAB_COLLECTOR_ENABLED`          | Enable the local Live Mode background collector         | Off natively; on in Compose      |
+| `HOMELAB_COLLECTOR_INTERVAL_SECONDS` | Collector cadence, clamped to 30–3,600 seconds          | `60`                             |
+| `HOMELAB_PROVIDER_CONFIG_PATH`       | Ignored, schema-validated provider registry             | `config/providers.json`          |
+| `HOMELAB_NTFY_URL`                   | Optional private/self-hosted ntfy topic URL             | Disabled                         |
+| `HOMELAB_NTFY_TOKEN_REF`             | Optional ntfy environment/Keychain secret reference     | Disabled                         |
+| `HOMELAB_SLACK_WEBHOOK_REF`          | Optional Slack webhook secret reference                 | Disabled                         |
 
 Hosted mode uses a pristine, temporary server snapshot while visitor changes stay in versioned `sessionStorage`. Direct hosted mutations are rejected, so warm serverless instances cannot leak one visitor's example data to another.
 
@@ -176,9 +195,23 @@ Create and integrity-check a native SQLite backup:
 ```bash
 npm run backup
 npm run backup:verify -- backups/homelab-YYYYMMDDTHHMMSS.sssZ.db
+npm run restore:drill -- backups/homelab-YYYYMMDDTHHMMSS.sssZ.db
 ```
 
 Docker performs this automatically. List or copy its backups with `docker compose exec homelab-backup ls -lh /app/backups` and `docker compose cp homelab-backup:/app/backups ./docker-backups`. Keep an additional copy on another disk; a volume is persistence, not disaster recovery.
+
+An actual restore is deliberately offline and requires both `--apply` and the exact confirmation flag. The script verifies the source, refuses a busy database, creates and verifies a pre-restore backup, atomically replaces the database, and verifies the result. See [Operations](docs/OPERATIONS.md) before using it.
+
+### Private remote access
+
+Keep the app on loopback and use host-installed Tailscale Serve when you need remote management from your own Tailnet:
+
+```bash
+npm run remote:check
+tailscale serve --bg http://127.0.0.1:3000
+```
+
+The preflight is read-only and changes nothing. Review its output before running Serve. Do **not** use Tailscale Funnel—Funnel creates a public endpoint. Add the optional access token as defense in depth and use `tailscale serve reset` to remove the route.
 
 ## Quality checks
 
@@ -188,7 +221,9 @@ npm run lint
 npm run typecheck
 npm test
 npm run test:e2e
+npm run test:e2e:hosted
 npm run build
+npm run performance:budget
 ```
 
 Install Playwright Chromium once if necessary:
@@ -197,7 +232,7 @@ Install Playwright Chromium once if necessary:
 npx playwright install chromium
 ```
 
-The suite covers private-address enforcement, CIDR validation, hosted-deployment fail-closed behavior, health scoring, alert rules, deterministic simulation, metric downsampling, provider normalization, SQLite workflows, component interaction, and complete browser journeys. GitHub Actions runs static, unit/integration, production-build, and browser checks on pushes and pull requests.
+The suite covers private-address enforcement, CIDR validation, hosted-deployment fail-closed behavior, health scoring, alert rules, deterministic simulation and scenarios, discovery reconciliation, provider configuration, metric downsampling, SQLite workflows, component interaction, WCAG Axe checks, and complete local/hosted browser journeys. GitHub Actions runs static, unit/integration, production-build, performance-budget, browser, CodeQL, dependency-audit, and container-vulnerability checks. Version tags publish an attested GHCR image with provenance and SBOM metadata.
 
 ## Deploy your own hosted showcase
 
@@ -227,6 +262,9 @@ HomeLab Commander is defensive and local-first:
 - Discovery is restricted to explicitly approved loopback, RFC1918 IPv4, and local-link IPv6 targets.
 - OS processes use fixed executable names and argument arrays—never user-built shell commands.
 - Discovery and diagnostics are bounded by target limits, timeouts, and rate limits.
+- Automated collection is opt-in, idle outside Live Mode, and restricted to approved local targets.
+- Provider credentials remain indirect environment/Keychain references and are never returned to the browser.
+- Wake-on-LAN sends one packet only after exact typed confirmation; no disruptive action is scheduled.
 - Docker access is read-only and opt-in.
 - Vercel deployments fail closed to hosted Demo Mode.
 - Hosted edits are browser-tab scoped and server mutations are disabled.
@@ -236,6 +274,8 @@ HomeLab Commander is defensive and local-first:
 - No arbitrary terminal, credential attack, public scanning, or unattended disruptive action is exposed.
 
 Review [Security](docs/SECURITY.md) before enabling Live Mode or exposing the local app beyond loopback. Please report security issues privately rather than opening a public issue with sensitive details.
+
+The source repository is intentionally public for portfolio review. Public source does not expose the running loopback process, Docker volumes, ignored provider configuration, Keychain, environment variables, or LAN. The full tracked history and CI logs are secret-scanned before release; GitHub secret scanning, push protection, CodeQL, Dependabot, and scheduled container/dependency scans provide continuing checks. See [Security policy](SECURITY.md).
 
 ## Project map
 

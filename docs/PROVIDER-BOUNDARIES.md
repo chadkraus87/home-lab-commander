@@ -6,20 +6,22 @@ The current Live Mode foundation deliberately exposes only local, bounded, read-
 
 - passive ARP/neighbour-table observation;
 - rate-limited ping discovery inside an approved private `/24`;
-- predefined DNS, ping, TCP, and HTTP diagnostics after local-address validation;
-- read-only `docker info` and `docker ps` observation;
+- predefined DNS, ping, TCP, HTTP, and TLS certificate diagnostics after explicit allowlist validation;
+- read-only `docker info`, `docker ps`, and one-shot `docker stats` observation;
+- manual and opt-in collector checks for Prometheus, Proxmox, UniFi, Home Assistant, SNMP, NUT, Tailscale, and SMART;
+- one-shot Wake-on-LAN behind approved-CIDR, stored-device, valid-MAC, Live Mode, and exact confirmation gates;
 - manual device, service, inventory, and note records.
 
-These tools run on demand. There is no unattended background network scan and no arbitrary command surface.
+Network discovery and operator actions run on demand. The background collector is explicit, idle outside Live Mode, restricted to saved manual services and enabled configured providers, and never performs discovery or Wake-on-LAN. There is no arbitrary command surface.
 
 ## Recommended expansion order
 
-1. A local background collector that writes normalized metrics without requiring an open browser.
-2. Read-only standards-based providers such as Prometheus, SNMP, and NUT/UPS.
-3. Product-specific read-only providers such as Proxmox and UniFi.
-4. An outbound-only remote agent for segmented networks.
+1. Normalize richer read-only metrics from the current health/readiness providers.
+2. Add saved alert thresholds, maintenance windows, and notification history.
+3. Add platform agents for normalized host telemetry.
+4. Add an outbound-only remote agent for segmented networks.
 
-Provider integrations are not enabled with invented endpoints or placeholder credentials. Each needs an operator-selected target, least-privilege credentials, a secret-storage decision, timeouts, and a testable normalized mapping.
+Provider integrations remain disabled in the example registry. Each needs an operator-selected target, least-privilege credential reference, approved range, installed local binary when applicable, timeouts, and a testable normalized mapping. Secrets are resolved server-side from `HOMELAB_SECRET_*` environment variables or macOS Keychain and never returned to the UI.
 
 ## Remote-agent minimum design
 

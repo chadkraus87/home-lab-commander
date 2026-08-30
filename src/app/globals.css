@@ -13,7 +13,7 @@
   --border-soft: #1a2530;
   --text: #ecf2f8;
   --muted: #8b9aaa;
-  --subtle: #617184;
+  --subtle: #8293a6;
   --blue: #5aa7ff;
   --blue-soft: #122b45;
   --cyan: #5fd4d0;
@@ -39,7 +39,7 @@
   --border-soft: #e7edf2;
   --text: #17212b;
   --muted: #5f6f7e;
-  --subtle: #8795a3;
+  --subtle: #617284;
   --blue: #1674d1;
   --blue-soft: #e8f3ff;
   --cyan: #167d83;
@@ -3662,6 +3662,77 @@ textarea::placeholder {
   margin: 3px 0 7px;
   color: var(--muted);
 }
+.demo-controls {
+  min-height: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 7px 22px;
+  border-bottom: 1px solid var(--border);
+  background: color-mix(in srgb, var(--blue-soft) 55%, var(--panel));
+}
+.demo-controls > div {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.demo-controls label {
+  font-size: 10px;
+  font-weight: 700;
+}
+.demo-controls select {
+  width: auto;
+  min-width: 104px;
+  height: 28px;
+  padding: 0 24px 0 8px;
+}
+.demo-controls span {
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 9px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.demo-tour {
+  position: fixed;
+  right: 20px;
+  bottom: 20px;
+  z-index: 80;
+  width: min(360px, calc(100vw - 32px));
+  padding: 16px;
+  background: var(--panel);
+  border: 1px solid color-mix(in srgb, var(--blue) 45%, var(--border));
+  border-radius: 12px;
+  box-shadow: 0 18px 60px rgb(0 0 0 / 35%);
+}
+.demo-tour header,
+.demo-tour footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.demo-tour header span,
+.demo-tour > a {
+  color: var(--blue);
+  font-size: 10px;
+  font-weight: 700;
+}
+.demo-tour h2 {
+  margin: 10px 0 4px;
+  font-size: 17px;
+}
+.demo-tour p {
+  margin: 0 0 10px;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.6;
+}
+.demo-tour footer {
+  margin-top: 16px;
+}
 @media (max-width: 720px) {
   .settings-layout {
     grid-template-columns: 1fr;
@@ -3687,6 +3758,13 @@ textarea::placeholder {
   }
   .settings-card-body {
     padding: 14px;
+  }
+  .demo-controls {
+    align-items: flex-start;
+    padding-inline: 14px;
+  }
+  .demo-controls > div > span {
+    display: none;
   }
 }
 @media (max-width: 520px) {

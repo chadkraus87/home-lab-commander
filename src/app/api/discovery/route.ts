@@ -1,4 +1,5 @@
 import { discoveryInputSchema } from "@/domain/schemas";
+import { reconcileDiscoveryResults } from "@/domain/reconciliation";
 import { LocalDiscoveryProvider } from "@/server/discovery";
 import { hostedDemoMessage, isHostedDemo } from "@/server/deployment";
 import { assertSameOrigin } from "@/server/request-security";
@@ -44,10 +45,11 @@ export async function POST(request: Request): Promise<Response> {
       parsed.data.cidr,
       parsed.data.method,
     );
+    const snapshot = getStore().snapshot();
     return Response.json({
       cidr: parsed.data.cidr,
       method: parsed.data.method,
-      results,
+      results: reconcileDiscoveryResults(results, snapshot.devices),
     });
   } catch (error) {
     const message =

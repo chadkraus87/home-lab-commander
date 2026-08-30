@@ -30,6 +30,8 @@ npm run start
 
 Both commands bind to `127.0.0.1` by default. Only processes on the same machine can connect. Stop them with `Ctrl C`.
 
+A fresh local database is empty by design. Use **Settings → Data → Reset Demo** only when you want the deterministic example lab; switching to Live Mode no longer requires keeping seed records.
+
 ## Optional single-operator access control
 
 Loopback-only operation does not normally need another login. If you deliberately make the process reachable from a trusted LAN, set a long random token:
@@ -55,6 +57,14 @@ curl --fail http://127.0.0.1:3000/api/health
 Enable Docker Desktop's “start at login” setting if the containers should return after a Mac restart. Compose uses `restart: unless-stopped`, so they restart with the Docker engine unless you intentionally stopped them.
 
 The application container is non-root, read-only outside its data volume and temporary directory, bound only to host loopback, stripped of Linux capabilities, protected with `no-new-privileges`, and constrained by process, CPU, memory, and log limits. The backup sidecar has no network at all.
+
+The collector is enabled by default in Compose but remains idle in Demo Mode. Its provider directory is mounted read-only from `config/`; create the ignored local registry with:
+
+```bash
+cp config/providers.example.json config/providers.json
+```
+
+Edit only local endpoints and secret references. Put actual values in `HOMELAB_SECRET_*` environment variables or macOS Keychain—not in the JSON file or Docker image. Provider binaries and hardware access vary by runtime; SMART and host Tailscale checks are usually best in a native process.
 
 Stop without deleting data:
 
@@ -104,7 +114,55 @@ Copy backups to another physical disk or encrypted backup system. Keeping a back
 
 ### Restore policy
 
-Restores are intentionally offline and manual because they replace the active database. First stop the application, verify the chosen backup, make a second copy of the current database, and only then replace it. Do not copy over a running WAL database. For Docker, export the chosen backup and database volume before restoring; do not use `docker compose down --volumes` as a restore step.
+First rehearse a restore without changing live data:
+
+```bash
+npm run restore:drill -- backups/homelab-YYYYMMDDTHHMMSS.sssZ.db
+```
+
+Restores are intentionally offline because they replace the active database. Stop the native process or Compose application, then run the guarded command:
+
+```bash
+npm run restore -- backups/homelab-YYYYMMDDTHHMMSS.sssZ.db --apply --confirm=REPLACE_LOCAL_DATABASE
+```
+
+The script verifies the backup and HomeLab schema, refuses a busy database, creates a verified pre-restore safety backup, stages the replacement with owner-only permissions, atomically renames it, removes stale WAL sidecars, and verifies the result. For Docker, copy both backup and current volume data out first and perform the restore with containers stopped. Never use `docker compose down --volumes` as a restore step.
+
+## Private remote access with Tailscale
+
+Keep the app and Docker port bound to `127.0.0.1`. Install Tailscale on the Mac host, connect it to your Tailnet, and run the read-only preflight:
+
+```bash
+npm run remote:check
+```
+
+When every check is ready, review and run:
+
+```bash
+tailscale serve --bg http://127.0.0.1:3000
+tailscale serve status
+```
+
+This publishes HTTPS only to authenticated devices in your Tailnet while the app remains on loopback. Configure `HOMELAB_ACCESS_TOKEN` as defense in depth. Do not use `tailscale funnel`, which creates a public endpoint. Remove access with `tailscale serve reset`.
+
+## Collector and providers
+
+- Native runtime: set `HOMELAB_COLLECTOR_ENABLED=1` before `npm run start`.
+- Compose: enabled by default; set it to `0` in `.env` to disable it.
+- Cadence: `HOMELAB_COLLECTOR_INTERVAL_SECONDS`, clamped to 30–3,600 seconds.
+- Safety state: always idle in Demo Mode and always disabled on Vercel.
+- Scope: manual services plus enabled providers, at four concurrent checks, inside approved private IPv4 ranges.
+- UI: **Settings → Integrations** shows redacted configuration and run status.
+
+Prometheus, Proxmox, UniFi, Home Assistant, SNMP, and NUT targets must resolve only to an approved private range. Tailscale and SMART use fixed local executable argument arrays. SNMP v2 community strings are passed to `snmpget` because that CLI requires it; prefer a dedicated read-only community and understand that same-host process inspection may expose arguments.
+
+Self-hosted ntfy delivery must also use an approved local endpoint. Slack delivery accepts only an HTTPS `hooks.slack.com` URL resolved indirectly through `HOMELAB_SLACK_WEBHOOK_REF`. Notification failures do not stop collection and secrets are not logged.
+
+## Deliberate operator actions
+
+- TLS certificate diagnostics read a private endpoint's peer certificate, report expiration and local trust, and never follow redirects.
+- Wake-on-LAN is available only for non-demo devices in Live Mode. It requires an approved `/24` or smaller CIDR, a valid stored MAC, and exact `WAKE <hostname>` confirmation for every packet. It is never scheduled.
+- Docker inventory runs `info`, `ps`, and one-shot `stats` only. Container logs and lifecycle controls remain excluded because they can expose secrets or change workloads.
 
 ## Operational checks
 

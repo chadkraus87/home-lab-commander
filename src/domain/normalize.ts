@@ -8,6 +8,8 @@ export function normalizeDockerContainer(input: {
   status: string;
   ports?: string;
   hostDeviceId: string;
+  cpu?: number;
+  memory?: number;
 }): ContainerRecord {
   const normalizedState =
     input.state === "running"
@@ -33,8 +35,8 @@ export function normalizeDockerContainer(input: {
       : [],
     createdAt: new Date(0).toISOString(),
     restartCount: 0,
-    cpu: 0,
-    memory: 0,
+    cpu: input.cpu ?? 0,
+    memory: input.memory ?? 0,
     uptimeSeconds: 0,
     source: "docker",
   };

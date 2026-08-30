@@ -29,7 +29,7 @@ export class AppStore {
   private readonly database: DatabaseSync;
   private readonly hostedDemo: boolean;
 
-  constructor(databasePath: string, seedWhenEmpty = true, hostedDemo = false) {
+  constructor(databasePath: string, seedWhenEmpty = false, hostedDemo = false) {
     this.hostedDemo = hostedDemo;
     this.database = openDatabase(databasePath);
     const row = this.database
@@ -360,7 +360,7 @@ export function getStore(): AppStore {
         (hostedDemo
           ? join(tmpdir(), "home-lab-commander.db")
           : join(process.cwd(), "data", "homelab.db")),
-      true,
+      hostedDemo,
       hostedDemo,
     );
   }

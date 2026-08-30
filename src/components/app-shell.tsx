@@ -36,6 +36,7 @@ import { useTheme } from "next-themes";
 import { calculateHealthScore } from "@/domain/health";
 import { useApp } from "@/components/app-provider";
 import { CommandPalette } from "@/components/command-palette";
+import { HostedDemoExperience } from "@/components/hosted-demo-experience";
 import { Button } from "@/components/ui";
 import { cn, titleCase } from "@/lib/utils";
 
@@ -271,6 +272,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             </span>
           </div>
         ) : null}
+        <HostedDemoExperience />
         <main className="page-content">{children}</main>
       </div>
       <CommandPalette open={commandOpen} onOpenChange={setCommandOpen} />

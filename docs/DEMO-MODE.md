@@ -30,6 +30,8 @@ The Vercel showcase runs the same deterministic environment with an additional s
 
 The UI labels this profile **Hosted showcase** and **Demo-only · ephemeral**, plus a global example-data privacy notice, so simulated telemetry is never confused with a live environment and visitors know not to enter sensitive information.
 
+The hosted control bar can load four deterministic scenarios: Balanced, Capacity, Outage, and Recovery. A scenario replaces the browser snapshot from the pristine seed so outcomes do not depend on previous edits. `?scenario=outage&tour=1` creates a shareable portfolio path into an accessible five-step guided tour. Scenario alerts and events use `demo-scenario:`/`demo.scenario.*` identifiers and `simulated: true` metadata.
+
 ## Testing
 
-Unit tests pin the clock and assert identical snapshots for identical inputs. E2E tests reset the Demo Environment before every journey so workflows remain independent and reproducible.
+Unit tests pin the clock and assert identical snapshots for identical inputs. E2E tests reset the Demo Environment before every journey so workflows remain independent and reproducible. A second hosted profile verifies scenario deep links, tour navigation, WCAG Axe checks, and `403` responses across every local-operator API.

@@ -4,18 +4,16 @@ The current application is complete for its local-first Demo and foundational Li
 
 ## Near term
 
-- Background collector process that persists Live metrics without an open browser.
-- Read-only Docker stats and opt-in bounded log retrieval.
 - Device editing beyond notes/tags, including provider ownership and merge resolution.
-- Notification adapters for local email, Slack, or ntfy with explicit secret storage.
 - Saved custom alert thresholds and scheduled maintenance windows.
-- Guided, offline restore drill with explicit database replacement confirmation.
+- Provider-specific telemetry normalization beyond current health/readiness checks.
+- Privacy-aware notification templates and delivery history.
 
 ## Provider expansion
 
 - Agent for Linux, macOS, Windows, and Raspberry Pi telemetry.
-- SNMP for switches, routers, access points, printers, and UPS devices.
-- Proxmox, Home Assistant, Prometheus, Grafana, Tailscale, SMART, and Wake-on-LAN adapters.
+- Read-only agent telemetry for switches, routers, access points, printers, and UPS devices beyond current identity/health checks.
+- Grafana metadata and deeper Proxmox, Home Assistant, Prometheus, UniFi, Tailscale, SMART, and NUT metrics.
 - Remote collectors for segmented VLANs with signed enrollment and least privilege.
 
 ## Platform evolution

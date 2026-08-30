@@ -13,6 +13,7 @@ import {
   Network,
   Palette,
   Play,
+  Plug,
   Radar,
   RefreshCw,
   RotateCcw,
@@ -22,7 +23,8 @@ import {
   Upload,
   Wifi,
 } from "lucide-react";
-import type { AppSettings, AppSnapshot, DiscoveryResult } from "@/domain/types";
+import type { AppSettings, AppSnapshot } from "@/domain/types";
+import type { ReconciledDiscoveryResult } from "@/domain/reconciliation";
 import { useApp } from "@/components/app-provider";
 import {
   Badge,
@@ -39,6 +41,7 @@ const sections = [
   { id: "live", label: "Environment", icon: Radar },
   { id: "networks", label: "Networks", icon: Network },
   { id: "monitoring", label: "Monitoring", icon: Activity },
+  { id: "integrations", label: "Integrations", icon: Plug },
   { id: "docker", label: "Docker", icon: Box },
   { id: "appearance", label: "Appearance", icon: Palette },
   { id: "data", label: "Data", icon: Database },
@@ -85,6 +88,8 @@ export function SettingsPage() {
             <NetworkSettings />
           ) : section === "monitoring" ? (
             <MonitoringSettings />
+          ) : section === "integrations" ? (
+            <IntegrationSettings />
           ) : section === "docker" ? (
             <DockerSettings />
           ) : section === "appearance" ? (
@@ -182,7 +187,7 @@ function EnvironmentSettings() {
     snapshot.settings.discoveryMethod,
   );
   const [scanning, setScanning] = useState(false);
-  const [results, setResults] = useState<DiscoveryResult[]>([]);
+  const [results, setResults] = useState<ReconciledDiscoveryResult[]>([]);
   const [scanError, setScanError] = useState("");
   const [selected, setSelected] = useState<Set<string>>(new Set());
 
@@ -196,13 +201,17 @@ function EnvironmentSettings() {
         body: JSON.stringify({ cidr, method }),
       });
       const body = (await response.json()) as {
-        results?: DiscoveryResult[];
+        results?: ReconciledDiscoveryResult[];
         error?: string;
       };
       if (!response.ok) throw new Error(body.error ?? "Discovery failed");
       const found = body.results ?? [];
       setResults(found);
-      setSelected(new Set(found.map((item) => item.ip)));
+      setSelected(
+        new Set(
+          found.filter((item) => !item.existingDeviceId).map((item) => item.ip),
+        ),
+      );
       setStep(4);
     } catch (error) {
       setScanError(error instanceof Error ? error.message : "Discovery failed");
@@ -481,6 +490,7 @@ function EnvironmentSettings() {
                   <label key={result.ip}>
                     <input
                       type="checkbox"
+                      disabled={Boolean(result.existingDeviceId)}
                       checked={selected.has(result.ip)}
                       onChange={(event) =>
                         setSelected((current) => {
@@ -495,7 +505,9 @@ function EnvironmentSettings() {
                       <strong>{result.hostname ?? result.ip}</strong>
                       <small>
                         {result.ip} · {result.macAddress ?? "MAC unavailable"} ·{" "}
-                        {result.confidence} confidence
+                        {result.existingDeviceId
+                          ? `matches an existing device by ${result.matchReason}`
+                          : `${result.confidence} confidence`}
                       </small>
                     </span>
                     <StatusBadge
@@ -646,6 +658,186 @@ function MonitoringSettings() {
         >
           <Save size={14} />
           Save monitoring
+        </Button>
+      </div>
+    </SettingsCard>
+  );
+}
+
+interface ProviderResult {
+  status: "healthy" | "degraded" | "offline" | "unavailable";
+  message: string;
+  checkedAt: string;
+}
+
+interface ProviderSummary {
+  id: string;
+  label: string;
+  kind: string;
+  enabled: boolean;
+  secretConfigured: boolean;
+  lastResult: ProviderResult | null;
+}
+
+function IntegrationSettings() {
+  const { snapshot } = useApp();
+  const [providers, setProviders] = useState<ProviderSummary[]>([]);
+  const [collector, setCollector] = useState<{
+    enabled: boolean;
+    running: boolean;
+    intervalSeconds: number;
+    lastCompletedAt: string | null;
+    serviceChecks: number;
+    providerChecks: number;
+  } | null>(null);
+  const [message, setMessage] = useState(
+    snapshot.hostedDemo
+      ? "Local providers are blocked in the hosted showcase."
+      : "Load the ignored provider registry to test local integrations.",
+  );
+  const [busy, setBusy] = useState("");
+
+  async function load() {
+    setBusy("load");
+    try {
+      const [providerResponse, collectorResponse] = await Promise.all([
+        fetch("/api/providers"),
+        fetch("/api/collector"),
+      ]);
+      const providerBody = (await providerResponse.json()) as {
+        providers?: ProviderSummary[];
+        error?: string;
+        message?: string;
+      };
+      if (providerBody.providers) setProviders(providerBody.providers);
+      if (collectorResponse.ok)
+        setCollector(
+          (await collectorResponse.json()) as NonNullable<typeof collector>,
+        );
+      setMessage(
+        providerBody.error ??
+          providerBody.message ??
+          (providerBody.providers?.length
+            ? "Provider registry loaded. Checks run only when you request them or enable the collector."
+            : "No local providers configured. Copy config/providers.example.json to config/providers.json."),
+      );
+    } catch {
+      setMessage("The local provider service could not be reached.");
+    } finally {
+      setBusy("");
+    }
+  }
+
+  async function checkProvider(id: string) {
+    setBusy(id);
+    try {
+      const response = await fetch("/api/providers", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id }),
+      });
+      const body = (await response.json()) as ProviderResult & {
+        error?: string;
+      };
+      if (!response.ok) throw new Error(body.error ?? "Provider check failed.");
+      setProviders((current) =>
+        current.map((provider) =>
+          provider.id === id ? { ...provider, lastResult: body } : provider,
+        ),
+      );
+      setMessage(body?.message ?? "Provider check completed.");
+    } catch (error) {
+      setMessage(
+        error instanceof Error ? error.message : "Provider check failed.",
+      );
+    } finally {
+      setBusy("");
+    }
+  }
+
+  async function runNow() {
+    setBusy("collector");
+    try {
+      const response = await fetch("/api/collector", { method: "POST" });
+      const body = (await response.json()) as NonNullable<typeof collector> & {
+        error?: string;
+      };
+      if (!response.ok) throw new Error(body.error ?? "Collector run failed.");
+      setCollector(body);
+      setMessage(
+        body.enabled
+          ? `Collector completed ${body.serviceChecks} service and ${body.providerChecks} provider checks.`
+          : "The collector is disabled. Set HOMELAB_COLLECTOR_ENABLED=1 and restart the local app.",
+      );
+    } catch (error) {
+      setMessage(
+        error instanceof Error ? error.message : "Collector run failed.",
+      );
+    } finally {
+      setBusy("");
+    }
+  }
+
+  return (
+    <SettingsCard
+      title="Local integrations"
+      description="Secret-reference providers and a bounded, opt-in background collector."
+      icon={<Plug />}
+    >
+      <div className="settings-note" role="status">
+        <ShieldCheck />
+        <p>{message}</p>
+      </div>
+      <div className="setting-row">
+        <div>
+          <strong>Background collector</strong>
+          <p>
+            {collector
+              ? `${collector.enabled ? "Enabled" : "Disabled"} · ${collector.intervalSeconds}s minimum cadence${collector.lastCompletedAt ? ` · last completed ${new Date(collector.lastCompletedAt).toLocaleString()}` : ""}`
+              : "Disabled unless explicitly enabled; always idle in Demo Mode and on Vercel."}
+          </p>
+        </div>
+        <Button
+          variant="secondary"
+          size="small"
+          disabled={Boolean(busy) || snapshot.hostedDemo}
+          onClick={runNow}
+        >
+          <RefreshCw size={14} className={busy === "collector" ? "spin" : ""} />{" "}
+          Run now
+        </Button>
+      </div>
+      {providers.map((provider) => (
+        <div className="setting-row" key={provider.id}>
+          <div>
+            <strong>{provider.label}</strong>
+            <p>
+              {provider.kind} ·{" "}
+              {provider.enabled ? "collector enabled" : "manual only"}
+              {provider.secretConfigured
+                ? " · secret reference configured"
+                : ""}
+              {provider.lastResult ? ` · ${provider.lastResult.message}` : ""}
+            </p>
+          </div>
+          <Button
+            variant="ghost"
+            size="small"
+            disabled={Boolean(busy)}
+            onClick={() => checkProvider(provider.id)}
+          >
+            {busy === provider.id ? "Checking…" : "Test"}
+          </Button>
+        </div>
+      ))}
+      <div className="form-actions">
+        <Button
+          variant="secondary"
+          disabled={Boolean(busy) || snapshot.hostedDemo}
+          onClick={load}
+        >
+          <RefreshCw size={14} className={busy === "load" ? "spin" : ""} /> Load
+          local configuration
         </Button>
       </div>
     </SettingsCard>

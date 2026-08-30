@@ -28,7 +28,7 @@ The active method enumerates usable hosts in one approved `/24`, checks eight at
 - **Medium:** a host responds or a partial neighbor record is present.
 - **Low:** reserved for future weak signals; current providers do not automatically promote low-confidence results.
 
-Discovered records remain reviewable until the operator chooses which systems to add. Promoted devices start with `unknown` type and no invented Live telemetry.
+Discovered records remain reviewable until the operator chooses which systems to add. Results are reconciled against existing devices by normalized MAC, then IP, then hostname; matches are labeled and disabled for duplicate promotion. New promoted devices start with `unknown` type and no invented Live telemetry.
 
 ## Platform limitations
 
@@ -36,6 +36,6 @@ Command availability and ping flags differ across macOS and Linux. Missing comma
 
 Docker Desktop adds another network namespace. Passive discovery inside the container can see its VM/container neighbor table instead of the Mac host's complete ARP table. Routed diagnostics may still work, but a native HomeLab Commander process is recommended when host-level discovery fidelity matters.
 
-## Not implemented
+## Deliberately excluded
 
-The current release does not use SNMP, SSH, aggressive port scans, vendor-cloud APIs, credential probes, public-internet scanning, or exploitation. Future discovery providers must preserve the same normalized result model and server-side allowlist checks.
+Discovery does not use SNMP, SSH, aggressive port scans, vendor-cloud APIs, credential probes, public-internet scanning, or exploitation. SNMP exists only as an explicitly configured single-target provider health check and is never part of discovery. Future discovery providers must preserve the same normalized result model and server-side allowlist checks.
