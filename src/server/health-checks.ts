@@ -56,7 +56,6 @@ async function tlsCertificate(
       host: address,
       port,
       servername: isAllowedLocalAddress(hostname) ? undefined : hostname,
-      rejectUnauthorized: false,
     });
     socket.setTimeout(3_000);
     socket.once("secureConnect", () => {
@@ -103,7 +102,7 @@ async function tlsCertificate(
         message: "A TLS handshake could not be completed.",
         observed: ["No certificate was received before timeout"],
         likelyExplanation:
-          "The service may not use TLS on this port or may be unavailable.",
+          "The service may be unavailable, may not use TLS on this port, or may present a certificate that this host does not trust.",
         recommendation: "Confirm the HTTPS port and service state.",
       });
     };

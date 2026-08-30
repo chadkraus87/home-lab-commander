@@ -21,6 +21,7 @@ This audit covered application trust boundaries, client/server separation, mutat
 13. **Docker's build context did not mirror all Git exclusions.** The Docker ignore policy now excludes backups, databases/WAL files, local provider configuration, environment files, keys/certificates, and all Playwright reports before `COPY . .` can create an image layer.
 14. **The release image contained a stale Alpine OpenSSL package.** Docker Scout identified seven fixable high-severity findings in OpenSSL 3.5.7. The shared base stage now applies Alpine security upgrades, and CI/release builds pull the current base before scanning or publishing.
 15. **Local browser QA could attach to an unrelated process on its test port.** The Playwright profile now uses a dedicated port and refuses to reuse an existing server, so a collision fails closed instead of testing the wrong application.
+16. **CodeQL found a dynamic tour link and disabled TLS certificate validation.** Tour navigation now uses an allowlisted scenario parser plus framework navigation without a dynamic DOM link. TLS diagnostics require normal certificate validation and report untrusted handshakes as failures instead of connecting insecurely.
 
 ## Verification results
 
@@ -35,7 +36,7 @@ This audit covered application trust boundaries, client/server separation, mutat
 | Vitest                                 | 13 files, 34 tests passed                                                  |
 | Playwright                             | 12 local journeys plus 3 hosted-boundary journeys                          |
 | Axe                                    | No serious or critical overview violations after contrast remediation      |
-| JavaScript budget                      | 1,974,311 bytes; below the 4,000,000-byte budget                           |
+| JavaScript budget                      | 1,974,368 bytes; below the 4,000,000-byte budget                           |
 | Desktop/mobile browser console audit   | No console errors, page errors, or failed responses                        |
 | Next.js production build               | Passed                                                                     |
 | Docker health and privilege inspection | Healthy; non-root; read-only; capabilities dropped; loopback-only port     |

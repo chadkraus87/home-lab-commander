@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
   ChevronLeft,
@@ -52,11 +51,7 @@ export function HostedDemoExperience() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const requestedScenario = searchParams.get("scenario");
-  const initialScenario = demoScenarioIds.includes(
-    requestedScenario as DemoScenarioId,
-  )
-    ? (requestedScenario as DemoScenarioId)
-    : "balanced";
+  const initialScenario = parseDemoScenario(requestedScenario);
   const [tourOpen, setTourOpen] = useState(searchParams.get("tour") === "1");
   const [step, setStep] = useState(0);
   const [scenario, setScenario] = useState<DemoScenarioId>(initialScenario);
@@ -88,7 +83,7 @@ export function HostedDemoExperience() {
             id="demo-scenario"
             value={scenario}
             onChange={(event) =>
-              selectScenario(event.target.value as DemoScenarioId)
+              selectScenario(parseDemoScenario(event.target.value))
             }
           >
             {demoScenarioIds.map((id) => (
@@ -133,9 +128,9 @@ export function HostedDemoExperience() {
           </header>
           <h2 id="demo-tour-title">{tourSteps[step]?.title}</h2>
           <p>{tourSteps[step]?.body}</p>
-          <Link href={`${tourSteps[step]?.href}?tour=1&scenario=${scenario}`}>
+          <Button variant="ghost" size="small" onClick={() => navigate(step)}>
             Open this view
-          </Link>
+          </Button>
           <footer>
             <Button
               variant="ghost"
@@ -165,4 +160,10 @@ export function HostedDemoExperience() {
       ) : null}
     </>
   );
+}
+
+function parseDemoScenario(value: string | null): DemoScenarioId {
+  if (value === "capacity" || value === "outage" || value === "recovery")
+    return value;
+  return "balanced";
 }

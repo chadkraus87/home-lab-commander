@@ -26,3 +26,4 @@ All notable changes are documented here.
 - Hosted deployments block collector, provider, discovery, diagnostic, Wake-on-LAN, import, Docker, and server-mutation boundaries.
 - Docker build context excludes local databases, backups, provider configuration, environment files, keys/certificates, and browser reports.
 - Container builds apply current Alpine security updates and pull the current base image before CI scanning or tagged publication.
+- Hosted scenario values are reduced through an explicit allowlist, and TLS diagnostics never disable certificate validation.

@@ -4,6 +4,9 @@ import { expect, test } from "@playwright/test";
 test("hosted showcase supports deep-linked scenarios and guided tour", async ({
   page,
 }) => {
+  await page.goto("/?scenario=%3Cscript%3Ealert(1)%3C%2Fscript%3E");
+  await expect(page.getByLabel("Scenario")).toHaveValue("balanced");
+
   await page.goto("/?scenario=outage&tour=1");
   await expect(page.getByText("Browser-session demo:")).toBeVisible();
   await expect(page.getByLabel("Scenario")).toHaveValue("outage");
