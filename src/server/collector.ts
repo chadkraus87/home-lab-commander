@@ -1,5 +1,6 @@
 import "server-only";
 
+import { getActiveMaintenanceWindow } from "@/domain/maintenance";
 import { SafeHealthCheckProvider } from "@/server/health-checks";
 import { resolveApprovedAddresses } from "@/server/local-http";
 import { log } from "@/server/logger";
@@ -66,6 +67,9 @@ export async function runCollector(): Promise<CollectorStatus> {
     const services = snapshot.services
       .filter((service) => service.source !== "demo")
       .slice(0, 128);
+    const maintenanceWindow = getActiveMaintenanceWindow(
+      snapshot.settings.maintenanceWindows,
+    );
     let serviceChecks = 0;
     for (let offset = 0; offset < services.length; offset += 4) {
       await Promise.all(
@@ -86,8 +90,12 @@ export async function runCollector(): Promise<CollectorStatus> {
               port: service.port,
               protocol: service.protocol === "https" ? "https" : "http",
             });
-            const transition = recordServiceCheck(service, check);
-            if (transition.newlyActive)
+            const transition = recordServiceCheck(
+              service,
+              check,
+              maintenanceWindow,
+            );
+            if (transition.newlyActive && !transition.notificationSuppressed)
               await sendConfiguredNotifications(
                 {
                   title: `${service.name} is unavailable`,
@@ -96,6 +104,11 @@ export async function runCollector(): Promise<CollectorStatus> {
                 },
                 snapshot.settings.approvedCidrs,
               );
+            if (transition.notificationSuppressed && maintenanceWindow)
+              log("info", "collector.notification.suppressed", {
+                serviceId: service.id,
+                maintenanceWindowId: maintenanceWindow.id,
+              });
             serviceChecks += 1;
           } catch (error) {
             log("warn", "collector.service.failed", {

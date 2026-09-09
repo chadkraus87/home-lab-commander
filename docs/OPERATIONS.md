@@ -158,6 +158,8 @@ Prometheus, Proxmox, UniFi, Home Assistant, SNMP, and NUT targets must resolve o
 
 Self-hosted ntfy delivery must also use an approved local endpoint. Slack delivery accepts only an HTTPS `hooks.slack.com` URL resolved indirectly through `HOMELAB_SLACK_WEBHOOK_REF`. Notification failures do not stop collection and secrets are not logged.
 
+Schedule planned work under **Settings → Monitoring**. A window must have a name, valid start and end times, no overlap with another saved window, and a duration of 14 days or less. While a window is active, collection, alert creation, and activity recording continue; only a newly active outage's outbound ntfy/Slack notification is suppressed. The active window remains visible globally, and the suppression decision is retained in event metadata.
+
 ## Deliberate operator actions
 
 - TLS certificate diagnostics read a private endpoint's peer certificate, report expiration and local trust, and never follow redirects.

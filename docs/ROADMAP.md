@@ -5,7 +5,7 @@ The current application is complete for its local-first Demo and foundational Li
 ## Near term
 
 - Device editing beyond notes/tags, including provider ownership and merge resolution.
-- Saved custom alert thresholds and scheduled maintenance windows.
+- Saved custom alert thresholds.
 - Provider-specific telemetry normalization beyond current health/readiness checks.
 - Privacy-aware notification templates and delivery history.
 

@@ -76,7 +76,7 @@ Provider interfaces expose normalized records:
 
 The current implementations are the deterministic Demo provider, local neighbor/ping discovery, predefined local diagnostics, read-only Docker CLI provider, and a registry for Prometheus, Proxmox, UniFi, Home Assistant, SNMP, NUT, Tailscale, and SMART. The registry stores no secret values; it resolves approved environment or macOS Keychain references only on the server. UI components never parse Docker, provider, or OS command output.
 
-The optional collector starts from Node instrumentation only for local runtimes. It remains idle until settings report Live Mode, clamps cadence, batches four checks, records service transitions through a separate short-lived SQLite repository, and invokes enabled providers through the same private-range policy. No browser needs to remain open.
+The optional collector starts from Node instrumentation only for local runtimes. It remains idle until settings report Live Mode, clamps cadence, batches four checks, records service transitions through a separate short-lived SQLite repository, and invokes enabled providers through the same private-range policy. Scheduled maintenance windows do not stop evidence collection: the collector records the alert and activity transition while suppressing only the first configured outbound notification for a new outage. No browser needs to remain open.
 
 See [Provider and remote-agent boundaries](PROVIDER-BOUNDARIES.md) for the deliberately disabled expansion path.
 

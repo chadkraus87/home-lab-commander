@@ -1,5 +1,8 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test } from "@playwright/test";
+import { enableBrowserGuards } from "./browser-guards";
+
+enableBrowserGuards();
 
 test("hosted showcase supports deep-linked scenarios and guided tour", async ({
   page,
@@ -56,4 +59,15 @@ test("hosted overview has no serious accessibility violations", async ({
       ["serious", "critical"].includes(violation.impact ?? ""),
     ),
   ).toEqual([]);
+});
+
+test("hosted maintenance scenario explains notification suppression", async ({
+  page,
+}) => {
+  await page.goto("/alerts?scenario=maintenance");
+  await expect(page.getByLabel("Scenario")).toHaveValue("maintenance");
+  await expect(
+    page.getByText("Archive NAS drive replacement is in progress"),
+  ).toBeVisible();
+  await expect(page.getByText(/new outbound notifications/)).toBeVisible();
 });
