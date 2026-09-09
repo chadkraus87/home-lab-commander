@@ -1,11 +1,12 @@
 "use client";
 
 import { useRef, useState, type FormEvent } from "react";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useTheme } from "next-themes";
 import {
   Activity,
   Box,
+  CalendarClock,
   Database,
   Download,
   Info,
@@ -20,10 +21,19 @@ import {
   Save,
   Settings,
   ShieldCheck,
+  Trash2,
   Upload,
   Wifi,
 } from "lucide-react";
-import type { AppSettings, AppSnapshot } from "@/domain/types";
+import type {
+  AppSettings,
+  AppSnapshot,
+  MaintenanceWindow,
+} from "@/domain/types";
+import {
+  maintenanceWindowState,
+  sortMaintenanceWindows,
+} from "@/domain/maintenance";
 import type { ReconciledDiscoveryResult } from "@/domain/reconciliation";
 import { useApp } from "@/components/app-provider";
 import {
@@ -35,6 +45,7 @@ import {
   SegmentedControl,
   StatusBadge,
 } from "@/components/ui";
+import { formatFutureTime, formatRelativeTime, titleCase } from "@/lib/utils";
 
 const sections = [
   { id: "general", label: "General", icon: Settings },
@@ -50,13 +61,12 @@ const sections = [
 type Section = (typeof sections)[number]["id"];
 
 export function SettingsPage() {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const requested = searchParams.get("section");
-  const [section, setSection] = useState<Section>(
-    sections.some((item) => item.id === requested)
-      ? (requested as Section)
-      : "general",
-  );
+  const section: Section = sections.some((item) => item.id === requested)
+    ? (requested as Section)
+    : "general";
   return (
     <>
       <PageHeader
@@ -71,7 +81,11 @@ export function SettingsPage() {
               <button
                 key={item.id}
                 className={section === item.id ? "active" : ""}
-                onClick={() => setSection(item.id)}
+                onClick={() =>
+                  router.replace(`/settings?section=${item.id}`, {
+                    scroll: false,
+                  })
+                }
               >
                 <item.icon size={15} />
                 <span>{item.label}</span>
@@ -603,6 +617,83 @@ function NetworkSettings() {
 function MonitoringSettings() {
   const { snapshot, mutate, busy } = useApp();
   const [days, setDays] = useState(snapshot.settings.retentionDays);
+  const [windowError, setWindowError] = useState("");
+  const now = new Date(snapshot.generatedAt);
+  const maintenanceWindows = sortMaintenanceWindows(
+    snapshot.settings.maintenanceWindows,
+    now,
+  );
+
+  async function scheduleMaintenance(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const formElement = event.currentTarget;
+    setWindowError("");
+    const form = new FormData(formElement);
+    const name = String(form.get("maintenanceName") ?? "").trim();
+    const startsAtValue = String(form.get("maintenanceStartsAt") ?? "");
+    const endsAtValue = String(form.get("maintenanceEndsAt") ?? "");
+    const startsAt = Date.parse(startsAtValue);
+    const endsAt = Date.parse(endsAtValue);
+    if (!name || !Number.isFinite(startsAt) || !Number.isFinite(endsAt)) {
+      setWindowError("Enter a name, start time, and end time.");
+      return;
+    }
+    if (endsAt <= startsAt) {
+      setWindowError("Maintenance must end after it starts.");
+      return;
+    }
+    if (endsAt - startsAt > 14 * 86_400_000) {
+      setWindowError("A maintenance window cannot exceed 14 days.");
+      return;
+    }
+    if (
+      snapshot.settings.maintenanceWindows.some(
+        (window) =>
+          startsAt < Date.parse(window.endsAt) &&
+          endsAt > Date.parse(window.startsAt),
+      )
+    ) {
+      setWindowError("That time overlaps an existing maintenance window.");
+      return;
+    }
+    if (snapshot.settings.maintenanceWindows.length >= 24) {
+      setWindowError("Remove an old maintenance window before adding another.");
+      return;
+    }
+    const maintenanceWindow: MaintenanceWindow = {
+      id: `maintenance-${globalThis.crypto.randomUUID()}`,
+      name,
+      startsAt: new Date(startsAt).toISOString(),
+      endsAt: new Date(endsAt).toISOString(),
+      createdAt: new Date().toISOString(),
+    };
+    const saved = await updateSettings(
+      mutate,
+      snapshot.settings,
+      {
+        maintenanceWindows: [
+          ...snapshot.settings.maintenanceWindows,
+          maintenanceWindow,
+        ],
+      },
+      "Maintenance window scheduled",
+    );
+    if (saved) formElement.reset();
+  }
+
+  async function removeMaintenance(id: string) {
+    await updateSettings(
+      mutate,
+      snapshot.settings,
+      {
+        maintenanceWindows: snapshot.settings.maintenanceWindows.filter(
+          (window) => window.id !== id,
+        ),
+      },
+      "Maintenance window removed",
+    );
+  }
+
   return (
     <SettingsCard
       title="Monitoring"
@@ -660,6 +751,101 @@ function MonitoringSettings() {
           Save monitoring
         </Button>
       </div>
+      <section
+        className="maintenance-section"
+        aria-labelledby="maintenance-title"
+      >
+        <header>
+          <span>
+            <CalendarClock />
+          </span>
+          <div>
+            <h3 id="maintenance-title">Scheduled maintenance</h3>
+            <p>
+              Keep collecting alerts and events while suppressing new outbound
+              notifications during planned work.
+            </p>
+          </div>
+        </header>
+        <form className="maintenance-form" onSubmit={scheduleMaintenance}>
+          <Field label="Maintenance window name">
+            <input
+              name="maintenanceName"
+              required
+              maxLength={120}
+              placeholder="NAS drive replacement"
+            />
+          </Field>
+          <Field label="Starts">
+            <input name="maintenanceStartsAt" type="datetime-local" required />
+          </Field>
+          <Field label="Ends">
+            <input name="maintenanceEndsAt" type="datetime-local" required />
+          </Field>
+          <Button type="submit" disabled={busy}>
+            <CalendarClock size={14} />
+            Schedule window
+          </Button>
+        </form>
+        {windowError ? (
+          <p className="field-error" role="alert">
+            {windowError}
+          </p>
+        ) : null}
+        <div className="settings-note">
+          <ShieldCheck />
+          <p>
+            Maintenance never hides or resolves an alert. It suppresses only the
+            first outbound notification for a new service outage and adds that
+            decision to the activity history.
+          </p>
+        </div>
+        <div className="maintenance-list">
+          {maintenanceWindows.map((window) => {
+            const state = maintenanceWindowState(window, now);
+            return (
+              <article className="maintenance-item" key={window.id}>
+                <span>
+                  <strong>{window.name}</strong>
+                  <small>
+                    {state === "active"
+                      ? `Ends ${formatFutureTime(window.endsAt)}`
+                      : state === "upcoming"
+                        ? `Starts ${formatFutureTime(window.startsAt)}`
+                        : `Ended ${formatRelativeTime(window.endsAt)}`}
+                  </small>
+                </span>
+                <Badge
+                  tone={
+                    state === "active"
+                      ? "info"
+                      : state === "upcoming"
+                        ? "neutral"
+                        : "positive"
+                  }
+                >
+                  {titleCase(state)}
+                </Badge>
+                <Button
+                  variant="ghost"
+                  size="small"
+                  disabled={busy}
+                  aria-label={`Remove ${window.name}`}
+                  onClick={() => removeMaintenance(window.id)}
+                >
+                  <Trash2 size={13} />
+                  Remove
+                </Button>
+              </article>
+            );
+          })}
+          {maintenanceWindows.length === 0 ? (
+            <p className="maintenance-empty">
+              No maintenance windows scheduled.
+            </p>
+          ) : null}
+        </div>
+      </section>
     </SettingsCard>
   );
 }

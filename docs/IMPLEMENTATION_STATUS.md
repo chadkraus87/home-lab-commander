@@ -20,7 +20,9 @@
 - Reconciled discovery promotion, TLS expiry diagnostics, confirmed Wake-on-LAN, and Docker CPU/memory stats
 - Offline restore drill/guarded restore and private Tailscale Serve preflight
 - Hosted scenario playback, deep links, guided tour, Open Graph metadata, sitemap, and robots policy
+- Validated scheduled maintenance windows with visible active state, alert preservation, collector notification suppression, and activity-history evidence
 - Axe accessibility gates, JavaScript budget, CodeQL, Dependabot, scheduled audits, container scanning, and attested release workflow
+- Restrictive browser Content Security Policy plus Playwright console, page-error, and failed-response gates
 
 ## External limitations
 

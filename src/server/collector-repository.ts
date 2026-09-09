@@ -3,28 +3,30 @@ import "server-only";
 import { randomUUID } from "node:crypto";
 import { join } from "node:path";
 import type { HealthCheckResult } from "@/domain/providers";
-import type { MonitoredService } from "@/domain/types";
+import type { MaintenanceWindow, MonitoredService } from "@/domain/types";
 import { openDatabase } from "@/server/database";
 
 export interface ServiceTransition {
   previous: MonitoredService["status"];
   current: MonitoredService["status"];
   newlyActive: boolean;
+  notificationSuppressed: boolean;
 }
 
 export function recordServiceCheck(
   service: MonitoredService,
   check: HealthCheckResult,
+  maintenanceWindow: MaintenanceWindow | null = null,
+  databasePath = process.env.HOMELAB_DATABASE_PATH ??
+    join(process.cwd(), "data", "homelab.db"),
 ): ServiceTransition {
-  const database = openDatabase(
-    process.env.HOMELAB_DATABASE_PATH ??
-      join(process.cwd(), "data", "homelab.db"),
-  );
+  const database = openDatabase(databasePath);
   const now = new Date().toISOString();
   const current: MonitoredService["status"] = check.ok ? "healthy" : "down";
   const previous = service.status;
   const fingerprint = `collector:service:${service.id}`;
   let newlyActive = false;
+  let notificationSuppressed = false;
   database.exec("BEGIN IMMEDIATE");
   try {
     database
@@ -46,6 +48,7 @@ export function recordServiceCheck(
           .run(now, check.message, active.id);
       } else {
         newlyActive = true;
+        notificationSuppressed = maintenanceWindow !== null;
         database
           .prepare(
             "INSERT INTO alerts (id, fingerprint, severity, category, device_id, source_id, title, description, status, first_triggered, last_triggered, acknowledged_at, resolved_at) VALUES (?, ?, 'critical', 'service', ?, ?, ?, ?, 'active', ?, ?, NULL, NULL)",
@@ -69,6 +72,11 @@ export function recordServiceCheck(
         .run(now, now, fingerprint);
     }
     if (previous !== current) {
+      const message = check.ok
+        ? `${service.name} recovered`
+        : maintenanceWindow
+          ? `${service.name} became unavailable during ${maintenanceWindow.name}; outbound notification suppressed`
+          : `${service.name} became unavailable`;
       database
         .prepare(
           "INSERT INTO events (id, device_id, event_type, severity, source, message, metadata_json, timestamp) VALUES (?, ?, ?, ?, 'collector', ?, ?, ?)",
@@ -78,10 +86,15 @@ export function recordServiceCheck(
           service.deviceId,
           check.ok ? "service.recovered" : "service.unavailable",
           check.ok ? "info" : "critical",
-          check.ok
-            ? `${service.name} recovered`
-            : `${service.name} became unavailable`,
-          JSON.stringify({ serviceId: service.id, automated: true }),
+          message,
+          JSON.stringify({
+            serviceId: service.id,
+            automated: true,
+            notificationSuppressed,
+            ...(maintenanceWindow
+              ? { maintenanceWindowId: maintenanceWindow.id }
+              : {}),
+          }),
           now,
         );
     }
@@ -92,5 +105,5 @@ export function recordServiceCheck(
   } finally {
     database.close();
   }
-  return { previous, current, newlyActive };
+  return { previous, current, newlyActive, notificationSuppressed };
 }

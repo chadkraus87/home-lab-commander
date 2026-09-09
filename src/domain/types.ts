@@ -190,6 +190,14 @@ export interface LabNote {
   updatedAt: string;
 }
 
+export interface MaintenanceWindow {
+  id: string;
+  name: string;
+  startsAt: string;
+  endsAt: string;
+  createdAt: string;
+}
+
 export interface AppSettings {
   applicationName: string;
   mode: EnvironmentMode;
@@ -201,6 +209,7 @@ export interface AppSettings {
   approvedCidrs: string[];
   discoveryMethod: "passive" | "ping";
   density: "comfortable" | "compact";
+  maintenanceWindows: MaintenanceWindow[];
 }
 
 export interface AppSnapshot {

@@ -32,11 +32,12 @@ The hosted deployment is intentionally different from a local installation:
 | Read-only local Docker inventory                          |      —      |        ✓, opt-in        |
 | Guided tour and incident scenario playback                |      ✓      |            ✓            |
 | Background service/provider collector                     |      —      |        ✓, opt-in        |
+| Scheduled maintenance and notification suppression        | ✓, this tab |      ✓, persistent      |
 | Provider health, TLS expiry, and Wake-on-LAN              |      —      | ✓, explicit boundaries  |
 
 Vercel cannot reach a visitor's private network, and the hosted build does not try. Hosted edits are kept in that visitor's browser tab, never written to a shared server database, and reset when the tab closes. Run locally for persistent state and Live Mode.
 
-Try a shareable portfolio flow: [open the guided outage scenario](https://home-lab-commander.vercel.app/?scenario=outage&tour=1), follow the incident across the command center and device view, then choose **Recovery** from the scenario control. All devices, addresses, alerts, and events in the hosted showcase are deterministic examples.
+Try a shareable portfolio flow: [open the guided outage scenario](https://home-lab-commander.vercel.app/?scenario=outage&tour=1), follow the incident across the command center and device view, then choose **Recovery** from the scenario control. Choose **Maintenance** to see how planned work suppresses outbound notifications without hiding operational evidence. All devices, addresses, alerts, and events in the hosted showcase are deterministic examples.
 
 ## Product tours
 
@@ -64,7 +65,7 @@ The media is reproducible: start the hosted-demo profile locally, then run `npm 
 - **Local integrations** — secret-reference provider checks for Prometheus, Proxmox, UniFi, Home Assistant, NUT, SNMP, Tailscale, and SMART.
 - **Bounded collection** — an opt-in Live Mode collector records service transitions, deduplicates alerts, and can deliver self-hosted ntfy or Slack notifications.
 - **Operator actions** — TLS certificate-expiry checks and one-shot Wake-on-LAN with approved-range and exact typed confirmation gates.
-- **Monitoring and alerts** — historical charts, retention and rollups, alert fingerprints, acknowledgement, resolution, and history.
+- **Monitoring and alerts** — historical charts, retention and rollups, alert fingerprints, acknowledgement, resolution, and scheduled maintenance windows.
 - **Inventory and knowledge** — hardware records plus fast Markdown lab notes with GitHub Flavored Markdown preview.
 - **Fast navigation** — unified `⌘ K` / `Ctrl K` infrastructure search and command palette.
 - **Polished interaction** — dark/light themes, responsive navigation, keyboard support, visible focus, and reduced-motion support.
@@ -89,7 +90,7 @@ flowchart LR
 
 The application is a single Node process for a personal homelab. Server Components read the repository directly; narrow route handlers validate mutations and provider operations. UI code consumes normalized domain records instead of Docker-, OS-, or vendor-specific output.
 
-See [Architecture](docs/ARCHITECTURE.md), [Security](docs/SECURITY.md), the [2026-08-30 security audit](docs/SECURITY-AUDIT.md), and [Network discovery](docs/NETWORK-DISCOVERY.md) for the complete boundaries.
+See [Architecture](docs/ARCHITECTURE.md), [Security](docs/SECURITY.md), the [current security audit](docs/SECURITY-AUDIT.md), and [Network discovery](docs/NETWORK-DISCOVERY.md) for the complete boundaries.
 
 ## Run locally
 
@@ -167,6 +168,12 @@ Live Mode pauses simulated telemetry and enables local tools on demand; it does 
 
 If `HOMELAB_COLLECTOR_ENABLED=1`, the collector starts only after the local app enters Live Mode. Its interval is clamped to 30–3,600 seconds, checks at most four targets concurrently, and evaluates only manual services and enabled providers inside approved ranges. Open **Settings → Integrations** to inspect status, test one provider, or request a run.
 
+### Schedule maintenance
+
+Open **Settings → Monitoring**, enter a short name plus start and end times, and select **Schedule window**. Windows cannot overlap, cannot exceed 14 days, and are limited to 24 saved records. Active maintenance is visible in the global header and on the Alerts page.
+
+The collector continues checking services and recording alerts and activity during maintenance. Only the first outbound ntfy or Slack notification for a newly detected outage is suppressed, and that decision is written to the activity metadata. Remove completed windows from the same settings panel when they are no longer useful.
+
 ## Configuration
 
 | Variable                             | Purpose                                                 | Default                          |
@@ -222,6 +229,8 @@ npm run typecheck
 npm test
 npm run test:e2e
 npm run test:e2e:hosted
+# Exercise the deployed portfolio build instead of starting a local hosted server:
+HOMELAB_HOSTED_URL=https://home-lab-commander.vercel.app npm run test:e2e:hosted
 npm run build
 npm run performance:budget
 ```
@@ -232,7 +241,7 @@ Install Playwright Chromium once if necessary:
 npx playwright install chromium
 ```
 
-The suite covers private-address enforcement, CIDR validation, hosted-deployment fail-closed behavior, health scoring, alert rules, deterministic simulation and scenarios, discovery reconciliation, provider configuration, metric downsampling, SQLite workflows, component interaction, WCAG Axe checks, and complete local/hosted browser journeys. GitHub Actions runs static, unit/integration, production-build, performance-budget, browser, CodeQL, dependency-audit, and container-vulnerability checks. Version tags publish an attested GHCR image with provenance and SBOM metadata.
+The suite covers private-address enforcement, CIDR validation, hosted-deployment fail-closed behavior, health scoring, alert rules, maintenance-window validation and suppression history, deterministic simulation and scenarios, discovery reconciliation, provider configuration, metric downsampling, SQLite workflows, component interaction, WCAG Axe checks, and complete local/hosted browser journeys. Browser tests fail on console errors, uncaught page errors, or failed page responses. GitHub Actions runs static, unit/integration, production-build, performance-budget, browser, CodeQL, full dependency-audit, and container-vulnerability checks. Version tags publish an attested GHCR image with provenance and SBOM metadata.
 
 ## Deploy your own hosted showcase
 
@@ -269,6 +278,7 @@ HomeLab Commander is defensive and local-first:
 - Vercel deployments fail closed to hosted Demo Mode.
 - Hosted edits are browser-tab scoped and server mutations are disabled.
 - Optional local access control uses constant-time credential comparison.
+- A restrictive Content Security Policy limits scripts, connections, framing, forms, and object content to the application boundary.
 - Portable imports are fully schema-validated, size-limited, and reopen in Demo Mode.
 - Docker runs non-root with a read-only root filesystem, dropped capabilities, and no host socket.
 - No arbitrary terminal, credential attack, public scanning, or unattended disruptive action is exposed.

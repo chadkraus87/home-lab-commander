@@ -7,7 +7,7 @@ import type {
   LabNote,
   MonitoredService,
 } from "@/domain/types";
-import { mutationSchema } from "@/domain/schemas";
+import { mutationSchema, settingsInputSchema } from "@/domain/schemas";
 import { createDemoSnapshot } from "@/simulation/demo-data";
 
 export const hostedSessionStorageKey = "homelab-commander:hosted-session:v1";
@@ -273,7 +273,9 @@ export function parseHostedSession(
       !hasSnapshotArrays(candidate)
     )
       return fallback;
-    return candidate as AppSnapshot;
+    const settings = settingsInputSchema.safeParse(candidate.settings);
+    if (!settings.success) return fallback;
+    return { ...(candidate as AppSnapshot), settings: settings.data };
   } catch {
     return fallback;
   }

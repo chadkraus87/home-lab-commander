@@ -20,7 +20,7 @@ ENV HOSTNAME=0.0.0.0
 ENV PORT=3000
 ENV HOMELAB_DATABASE_PATH=/app/data/homelab.db
 
-RUN apk add --no-cache iputils iproute2 net-tools \
+RUN apk add --no-cache iputils iproute2 \
   && addgroup --system --gid 1001 nodejs \
   && adduser --system --uid 1001 --ingroup nodejs nextjs \
   && mkdir -p /app/data /app/backups \

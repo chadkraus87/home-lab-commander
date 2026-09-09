@@ -4,6 +4,7 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
+import { recordServiceCheck } from "@/server/collector-repository";
 import { AppStore } from "@/server/store";
 
 const directories: string[] = [];
@@ -94,6 +95,47 @@ describe("SQLite integration workflows", () => {
     expect(
       store.resetDemo().notes.some((note) => note.title === "Test note"),
     ).toBe(false);
+    store.close();
+  });
+
+  it("records maintenance notification suppression in the activity history", () => {
+    const directory = mkdtempSync(join(tmpdir(), "homelab-commander-"));
+    directories.push(directory);
+    const path = join(directory, "test.db");
+    const store = new AppStore(path, true);
+    const service = store.snapshot().services.find(({ id }) => id === "pihole");
+    expect(service).toBeTruthy();
+    const transition = recordServiceCheck(
+      service!,
+      {
+        ok: false,
+        kind: "http",
+        latencyMs: null,
+        message: "Planned service restart",
+        observed: ["No response"],
+        likelyExplanation: "Maintenance",
+        recommendation: "Wait for the maintenance window to end.",
+      },
+      {
+        id: "maintenance-test",
+        name: "DNS upgrade",
+        startsAt: "2026-09-09T11:00:00.000Z",
+        endsAt: "2026-09-09T13:00:00.000Z",
+        createdAt: "2026-09-08T12:00:00.000Z",
+      },
+      path,
+    );
+    expect(transition.notificationSuppressed).toBe(true);
+    expect(
+      store
+        .snapshot()
+        .events.find((event) =>
+          event.message.includes("outbound notification suppressed"),
+        )?.metadata,
+    ).toMatchObject({
+      maintenanceWindowId: "maintenance-test",
+      notificationSuppressed: true,
+    });
     store.close();
   });
 });

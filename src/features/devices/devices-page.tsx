@@ -194,7 +194,7 @@ export function DevicesPage() {
               <input
                 name="hostname"
                 required
-                pattern="[a-zA-Z0-9.-]+"
+                pattern={"[a-zA-Z0-9.\\-]+"}
                 placeholder="build-server.lab"
               />
             </Field>

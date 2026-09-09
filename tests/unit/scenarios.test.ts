@@ -25,4 +25,18 @@ describe("hosted demo scenarios", () => {
       recovery.services.find((service) => service.id === "pihole")?.status,
     ).toBe("healthy");
   });
+
+  it("shows an active notification-suppression window", () => {
+    const base = createDemoSnapshot();
+    const maintenance = applyDemoScenario(
+      base,
+      "maintenance",
+      "2026-09-09T12:00:00.000Z",
+    );
+    expect(maintenance.settings.maintenanceWindows).toHaveLength(1);
+    expect(maintenance.settings.maintenanceWindows[0]?.startsAt).toBe(
+      "2026-09-09T11:45:00.000Z",
+    );
+    expect(maintenance.events[0]?.eventType).toBe("demo.scenario.maintenance");
+  });
 });

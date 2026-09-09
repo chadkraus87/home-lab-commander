@@ -16,7 +16,7 @@ The default installation:
 
 ## Input validation
 
-Zod schemas validate persistent mutations, ports, hosts, CIDRs, diagnostic kinds, discovery methods, and every record in a portable import. Imports are capped at 2 MB, applied transactionally only after complete validation, and force Demo Mode so restored networks receive a fresh review. The network policy accepts loopback, RFC1918 IPv4, IPv6 unique-local, and IPv6 link-local addresses where relevant. Discovery additionally requires a CIDR already saved in the application's approved allowlist and caps each active run at 256 addresses.
+Zod schemas validate persistent mutations, ports, hosts, CIDRs, diagnostic kinds, discovery methods, maintenance windows, and every record in a portable import. Maintenance windows must have unique identifiers, cannot overlap, cannot exceed 14 days, and are capped at 24 saved records. Imports are capped at 2 MB, applied transactionally only after complete validation, and force Demo Mode so restored networks receive a fresh review. The network policy accepts loopback, RFC1918 IPv4, IPv6 unique-local, and IPv6 link-local addresses where relevant. Discovery additionally requires a CIDR already saved in the application's approved allowlist and caps each active run at 256 addresses.
 
 SQLite operations use prepared statements. User input is never interpolated into SQL or shell command strings.
 
@@ -45,7 +45,7 @@ The Docker provider runs only `docker info`, `docker ps -a`, and one-shot `docke
 
 The ignored provider registry is strict-schema validated, contains only configuration and indirect secret references, and is redacted before browser delivery. Environment references must start with `HOMELAB_SECRET_`; Keychain resolution uses fixed `security find-generic-password` arguments on macOS. HTTP provider requests reject userinfo, redirects, public/mixed DNS answers, targets outside approved CIDRs, responses over 64 KB, and requests beyond four seconds. Self-signed certificates require explicit per-provider opt-in.
 
-The collector does not start on Vercel and remains idle in Demo Mode. It records only normalized status transitions, deduplicated alert fingerprints, and non-secret metadata. Slack webhooks are restricted to `https://hooks.slack.com`; self-hosted ntfy must resolve into the local allowlist. Notification failures are isolated.
+The collector does not start on Vercel and remains idle in Demo Mode. It records only normalized status transitions, deduplicated alert fingerprints, and non-secret metadata. During validated scheduled maintenance, evidence collection continues and only the first outbound notification for a new outage is suppressed; the reason is recorded in activity metadata. Slack webhooks are restricted to `https://hooks.slack.com`; self-hosted ntfy must resolve into the local allowlist. Notification failures are isolated.
 
 TLS inspection connects only after the same approved-target resolution. Wake-on-LAN sends one standard UDP magic packet to an approved `/24`-or-smaller broadcast only after exact typed confirmation for a stored non-demo device. No background or bulk wake operation exists.
 
@@ -59,7 +59,7 @@ SQLite online backups receive owner-only permissions and an integrity check. Aut
 
 ## Browser protections
 
-Mutation routes compare an incoming browser `Origin` to the request host. Optional local access control uses a minimum-length token and constant-time comparison before requests reach application routes. Responses include `X-Content-Type-Options`, `X-Frame-Options`, `X-DNS-Prefetch-Control`, `Cross-Origin-Opener-Policy`, `Cross-Origin-Resource-Policy`, `Referrer-Policy`, and a restrictive Permissions Policy. Status is conveyed through text and icons in addition to color.
+Mutation routes compare an incoming browser `Origin` to the request host. Optional local access control uses a minimum-length token and constant-time comparison before requests reach application routes. Responses include `X-Content-Type-Options`, `X-Frame-Options`, `X-DNS-Prefetch-Control`, `Cross-Origin-Opener-Policy`, `Cross-Origin-Resource-Policy`, `Referrer-Policy`, and a restrictive Permissions Policy. A Content Security Policy constrains scripts, styles, images, fonts, connections, forms, framing, base URLs, and object content to the application boundary. Development adds only the evaluation and WebSocket allowances required by the Next.js development runtime; production does not. Status is conveyed through text and icons in addition to color.
 
 ## Public showcase boundary
 
@@ -88,10 +88,10 @@ Compose publishes only `127.0.0.1:3000`, runs the app as a non-root user with a 
 
 Do not include credentials, internal IP inventories, or sensitive logs in public vulnerability reports. Provide a minimal reproduction against Demo Mode when possible.
 
-The most recent recorded review is [Security audit — 2026-08-30](SECURITY-AUDIT.md).
+The most recent recorded review is [Security audit — 2026-09-09](SECURITY-AUDIT.md).
 
 ## Public repository and supply chain
 
 Repository visibility does not publish ignored runtime files, Docker volumes, environment variables, Keychain items, or a loopback service. Before the public transition, all tracked history and historical Actions logs were scanned for high-confidence secrets and local paths; Gitleaks 8.30.1 found no leaks across all commits. Tracked media contains deterministic demo infrastructure only.
 
-Continuing controls include GitHub secret scanning and push protection, private vulnerability reporting, Dependabot for npm/Docker/Actions, CodeQL, scheduled production dependency audits, Trivy container scans, immutable action SHAs, and tagged GHCR builds with GitHub provenance/SBOM attestations. Install scripts remain fail-closed through npm's strict allowlist.
+Continuing controls include GitHub secret scanning and push protection, private vulnerability reporting, Dependabot for npm/Docker/Actions, CodeQL, scheduled full dependency audits, Trivy container scans, immutable action SHAs, and tagged GHCR builds with GitHub provenance/SBOM attestations. Install scripts remain fail-closed through npm's strict allowlist.

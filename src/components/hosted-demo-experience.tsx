@@ -163,7 +163,12 @@ export function HostedDemoExperience() {
 }
 
 function parseDemoScenario(value: string | null): DemoScenarioId {
-  if (value === "capacity" || value === "outage" || value === "recovery")
+  if (
+    value === "capacity" ||
+    value === "maintenance" ||
+    value === "outage" ||
+    value === "recovery"
+  )
     return value;
   return "balanced";
 }

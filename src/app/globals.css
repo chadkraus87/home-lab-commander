@@ -419,6 +419,23 @@ kbd {
   color: var(--text);
   font-size: 12px;
 }
+.maintenance-chip {
+  height: 34px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 9px;
+  color: var(--amber);
+  background: var(--amber-soft);
+  border: 1px solid color-mix(in srgb, var(--amber) 30%, var(--border));
+  border-radius: 7px;
+  font-size: 10px;
+  font-weight: 650;
+  white-space: nowrap;
+}
+.maintenance-chip:hover {
+  border-color: var(--amber);
+}
 .health-dot {
   width: 7px;
   height: 7px;
@@ -1066,7 +1083,8 @@ textarea::placeholder {
   }
   .search-trigger span,
   .search-trigger kbd,
-  .health-chip span {
+  .health-chip span,
+  .maintenance-chip span {
     display: none;
   }
 }
@@ -1155,6 +1173,11 @@ textarea::placeholder {
   }
   .topbar-actions {
     gap: 2px;
+  }
+  .maintenance-chip {
+    width: 34px;
+    justify-content: center;
+    padding: 0;
   }
   .breadcrumbs span:not(:last-child) {
     display: none;
@@ -2703,6 +2726,41 @@ textarea::placeholder {
 }
 
 /* Alerts and activity */
+.maintenance-banner {
+  min-height: 68px;
+  display: grid;
+  grid-template-columns: 36px 1fr auto;
+  align-items: center;
+  gap: 11px;
+  margin-bottom: 12px;
+  padding: 12px 14px;
+  color: var(--text);
+  background: var(--amber-soft);
+  border: 1px solid color-mix(in srgb, var(--amber) 30%, var(--border));
+  border-radius: 9px;
+}
+.maintenance-banner > svg {
+  width: 36px;
+  height: 36px;
+  padding: 9px;
+  color: var(--amber);
+  background: var(--panel);
+  border-radius: 8px;
+}
+.maintenance-banner strong {
+  font-size: 11px;
+}
+.maintenance-banner p {
+  margin: 3px 0 0;
+  color: var(--muted);
+  font-size: 9px;
+  line-height: 1.45;
+}
+.maintenance-banner a {
+  color: var(--amber);
+  font-size: 10px;
+  font-weight: 650;
+}
 .alert-summary {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
@@ -3516,6 +3574,80 @@ textarea::placeholder {
   width: auto;
   min-width: 130px;
 }
+.maintenance-section {
+  margin-top: 22px;
+  padding-top: 18px;
+  border-top: 1px solid var(--border-soft);
+}
+.maintenance-section > header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 15px;
+}
+.maintenance-section > header > span {
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  color: var(--amber);
+  background: var(--amber-soft);
+  border-radius: 8px;
+}
+.maintenance-section > header svg {
+  width: 16px;
+}
+.maintenance-section h3 {
+  margin: 0;
+  font-size: 12px;
+}
+.maintenance-section header p {
+  margin: 3px 0 0;
+  color: var(--muted);
+  font-size: 9px;
+  line-height: 1.45;
+}
+.maintenance-form {
+  display: grid;
+  grid-template-columns: minmax(190px, 1fr) repeat(2, minmax(165px, 0.8fr)) auto;
+  align-items: end;
+  gap: 10px;
+}
+.maintenance-form .button {
+  margin-bottom: 1px;
+}
+.maintenance-list {
+  margin-top: 14px;
+  border-top: 1px solid var(--border-soft);
+}
+.maintenance-item {
+  min-height: 60px;
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  align-items: center;
+  gap: 10px;
+  border-bottom: 1px solid var(--border-soft);
+}
+.maintenance-item > span {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.maintenance-item strong {
+  overflow: hidden;
+  font-size: 10px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.maintenance-item small,
+.maintenance-empty {
+  color: var(--muted);
+  font-size: 9px;
+}
+.maintenance-empty {
+  margin: 14px 0 0;
+}
 .integration-card {
   min-height: 88px;
   display: grid;
@@ -3759,6 +3891,12 @@ textarea::placeholder {
   .settings-card-body {
     padding: 14px;
   }
+  .maintenance-form {
+    grid-template-columns: 1fr 1fr;
+  }
+  .maintenance-form .field:first-child {
+    grid-column: 1 / -1;
+  }
   .demo-controls {
     align-items: flex-start;
     padding-inline: 14px;
@@ -3778,6 +3916,12 @@ textarea::placeholder {
   }
   .mode-cards > button {
     grid-template-columns: 38px 1fr;
+  }
+  .maintenance-banner {
+    grid-template-columns: 36px 1fr;
+  }
+  .maintenance-banner > a {
+    grid-column: 2;
   }
   .mode-cards .badge {
     display: none;
@@ -3810,5 +3954,22 @@ textarea::placeholder {
   }
   .theme-preview {
     display: none;
+  }
+  .maintenance-form {
+    grid-template-columns: 1fr;
+  }
+  .maintenance-form .field:first-child {
+    grid-column: auto;
+  }
+  .maintenance-form .button {
+    justify-self: start;
+  }
+  .maintenance-item {
+    grid-template-columns: 1fr auto;
+    padding: 10px 0;
+  }
+  .maintenance-item .button {
+    grid-column: 1 / -1;
+    justify-self: start;
   }
 }

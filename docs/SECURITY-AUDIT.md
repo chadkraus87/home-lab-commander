@@ -1,8 +1,8 @@
-# Security audit — 2026-08-30
+# Security audit — 2026-09-09
 
 ## Scope
 
-This audit covered application trust boundaries, client/server separation, mutation and import validation, private-network enforcement, collector/provider/Wake-on-LAN boundaries, optional local access control, public Git history and Actions logs, dependency advisories, secrets hygiene, response headers, Docker runtime configuration, and container packages.
+This audit covered application trust boundaries, client/server separation, mutation and import validation, private-network enforcement, collector/provider/Wake-on-LAN boundaries, maintenance notification behavior, optional local access control, public Git history and Actions logs, dependency advisories and signatures, secrets hygiene, response headers, browser failure telemetry, Docker runtime configuration, and container packages.
 
 ## Findings remediated
 
@@ -22,6 +22,11 @@ This audit covered application trust boundaries, client/server separation, mutat
 14. **The release image contained a stale Alpine OpenSSL package.** Docker Scout identified seven fixable high-severity findings in OpenSSL 3.5.7. The shared base stage now applies Alpine security upgrades, and CI/release builds pull the current base before scanning or publishing.
 15. **Local browser QA could attach to an unrelated process on its test port.** The Playwright profile now uses a dedicated port and refuses to reuse an existing server, so a collision fails closed instead of testing the wrong application.
 16. **CodeQL found a dynamic tour link and disabled TLS certificate validation.** Tour navigation now uses an allowlisted scenario parser plus framework navigation without a dynamic DOM link. TLS diagnostics require normal certificate validation and report untrusted handshakes as failures instead of connecting insecurely.
+17. **New framework, image-processing, and YAML advisories affected the dependency graph.** Next.js was upgraded to 16.3.4, Sharp to 0.35.4, and transitive `js-yaml` to 4.3.2. The scheduled workflow now audits development dependencies as well as production packages.
+18. **Browser policy depended on individual headers without a Content Security Policy.** A restrictive CSP now limits scripts, styles, images, fonts, connections, forms, frames, object embedding, and framing origins for both local and hosted deployments.
+19. **Browser journeys did not fail on console, page, or response errors.** Shared guards now make every local and hosted journey fail on console errors, uncaught page errors, and HTTP responses at or above 400. The first guarded run exposed and fixed an asynchronous form-reset error and an invalid Unicode-aware HTML hostname pattern.
+20. **Planned work could create noisy outbound incident notifications.** Maintenance windows are schema-validated, limited in count and duration, reject overlaps, and preserve all alerts and activity. During an active window the collector suppresses only the first outbound outage notification and records the suppression decision and window identifier.
+21. **The rebuilt runtime image contained an unfixed medium-severity `net-tools` advisory.** The package was unused and removed; Linux neighbor discovery continues through `iproute2`. A repeat all-severity scan found no vulnerable packages.
 
 ## Verification results
 
@@ -33,17 +38,20 @@ This audit covered application trust boundaries, client/server separation, mutat
 | Repository secret-pattern scan         | No credential/private-key material found                                   |
 | ESLint                                 | Passed                                                                     |
 | Strict TypeScript                      | Passed                                                                     |
-| Vitest                                 | 13 files, 34 tests passed                                                  |
-| Playwright                             | 12 local journeys plus 3 hosted-boundary journeys                          |
+| npm registry signatures                | 638 verified signatures and 162 verified attestations                      |
+| Vitest                                 | 14 files, 39 tests passed                                                  |
+| Playwright                             | 14 local journeys plus 4 hosted-boundary journeys                          |
 | Axe                                    | No serious or critical overview violations after contrast remediation      |
-| JavaScript budget                      | 1,974,368 bytes; below the 4,000,000-byte budget                           |
-| Desktop/mobile browser console audit   | No console errors, page errors, or failed responses                        |
+| JavaScript budget                      | 1,984,954 bytes; below the 4,000,000-byte budget                           |
+| Desktop/mobile browser error guard     | No console errors, page errors, or failed responses                        |
+| Maintenance visual inspection          | Active state, alert context, scheduling UI, and removal control verified   |
 | Next.js production build               | Passed                                                                     |
 | Docker health and privilege inspection | Healthy; non-root; read-only; capabilities dropped; loopback-only port     |
 | Automated backup                       | Created, mode `0600`, integrity verified, no network in sidecar            |
 | Hosted mutation and discovery probes   | Both rejected with `403`                                                   |
 | Hosted local-operation probes          | Discovery, diagnostics, collector, providers, and Wake-on-LAN rejected 403 |
-| Full tracked Git history (Gitleaks)    | Every release commit scanned; no leaks found                               |
+| Release source scan (Gitleaks 8.30.1)  | 7.18 MB scanned after generated/dependency exclusions; no leaks found      |
+| Full tracked Git history (Gitleaks)    | Every prior release commit scanned; no leaks found                         |
 | Historical Actions-log scan            | No high-confidence secrets or local filesystem paths found                 |
 | Optional access-control probe          | Health `200`; anonymous/wrong credentials `401`; correct credentials `200` |
 

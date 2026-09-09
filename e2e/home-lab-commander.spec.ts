@@ -1,5 +1,8 @@
 import { expect, test } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
+import { enableBrowserGuards } from "./browser-guards";
+
+enableBrowserGuards();
 
 test.beforeEach(async ({ page }) => {
   await page.goto("/");
@@ -13,6 +16,18 @@ test("fresh application opens a populated Demo dashboard", async ({ page }) => {
   ).toBeVisible();
   await expect(page.getByText("Demo Environment Active")).toBeVisible();
   await expect(page.getByText("Managed devices")).toBeVisible();
+});
+
+test("serves restrictive browser security headers", async ({ request }) => {
+  const response = await request.get("/");
+  expect(response.headers()["content-security-policy"]).toContain(
+    "object-src 'none'",
+  );
+  expect(response.headers()["content-security-policy"]).toContain(
+    "frame-ancestors 'none'",
+  );
+  expect(response.headers()["x-content-type-options"]).toBe("nosniff");
+  expect(response.headers()["x-frame-options"]).toBe("DENY");
 });
 
 test("opens a device with metrics and services", async ({ page }) => {
@@ -124,6 +139,39 @@ test("visibly opens the guarded Live Mode activation flow", async ({
     "aria-pressed",
     "true",
   );
+});
+
+test("schedules maintenance and shows notification suppression context", async ({
+  page,
+}) => {
+  await page.goto("/settings?section=monitoring");
+  const times = await page.evaluate(() => {
+    const inputValue = (date: Date) => {
+      const offset = date.getTimezoneOffset() * 60_000;
+      return new Date(date.getTime() - offset).toISOString().slice(0, 16);
+    };
+    return {
+      startsAt: inputValue(new Date(Date.now() - 60_000)),
+      endsAt: inputValue(new Date(Date.now() + 30 * 60_000)),
+    };
+  });
+  await page.getByLabel("Maintenance window name").fill("E2E maintenance");
+  await page.getByLabel("Starts").fill(times.startsAt);
+  await page.getByLabel("Ends").fill(times.endsAt);
+  await page.getByRole("button", { name: "Schedule window" }).click();
+  await expect(page.getByText("Maintenance window scheduled")).toBeVisible();
+  await expect(page.getByText("E2E maintenance")).toBeVisible();
+  await page.getByRole("link", { name: /Alerts/ }).click();
+  await expect(page.getByText("E2E maintenance is in progress")).toBeVisible();
+  await expect(
+    page.getByText(/outbound notifications are suppressed/),
+  ).toBeVisible();
+  await page.getByRole("link", { name: "Manage window" }).click();
+  await expect(page.getByRole("heading", { name: "Monitoring" })).toBeVisible();
+  await page.getByRole("button", { name: "General" }).click();
+  await expect(page.getByRole("heading", { name: "General" })).toBeVisible();
+  await page.getByRole("link", { name: "Maintenance active" }).click();
+  await expect(page.getByRole("heading", { name: "Monitoring" })).toBeVisible();
 });
 
 test("mobile navigation remains usable", async ({ page }) => {

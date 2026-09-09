@@ -64,23 +64,80 @@ export const noteInputSchema = z.object({
   linkedServiceIds: z.array(z.string()).max(50).default([]),
 });
 
-export const settingsInputSchema = z.object({
-  applicationName: nonEmpty,
-  mode: z.enum(["demo", "live"]),
-  theme: z.enum(["system", "dark", "light"]),
-  refreshSeconds: z.coerce.number().int().min(2).max(3600),
-  timezone: z.string().trim().min(1).max(80),
-  units: z.enum(["metric", "imperial"]),
-  retentionDays: z.coerce.number().int().min(1).max(3650),
-  approvedCidrs: z
-    .array(
-      z.string().refine(isPrivateCidr, "Only private IPv4 ranges are allowed."),
-    )
-    .min(1)
-    .max(16),
-  discoveryMethod: z.enum(["passive", "ping"]),
-  density: z.enum(["comfortable", "compact"]),
-});
+const maintenanceWindowSchema = z
+  .object({
+    id: z.string().trim().min(1).max(100),
+    name: z.string().trim().min(1).max(120),
+    startsAt: z.iso.datetime(),
+    endsAt: z.iso.datetime(),
+    createdAt: z.iso.datetime(),
+  })
+  .superRefine((window, context) => {
+    const startsAt = Date.parse(window.startsAt);
+    const endsAt = Date.parse(window.endsAt);
+    if (endsAt <= startsAt)
+      context.addIssue({
+        code: "custom",
+        path: ["endsAt"],
+        message: "Maintenance must end after it starts.",
+      });
+    if (endsAt - startsAt > 14 * 86_400_000)
+      context.addIssue({
+        code: "custom",
+        path: ["endsAt"],
+        message: "A maintenance window cannot exceed 14 days.",
+      });
+  });
+
+export const settingsInputSchema = z
+  .object({
+    applicationName: nonEmpty,
+    mode: z.enum(["demo", "live"]),
+    theme: z.enum(["system", "dark", "light"]),
+    refreshSeconds: z.coerce.number().int().min(2).max(3600),
+    timezone: z.string().trim().min(1).max(80),
+    units: z.enum(["metric", "imperial"]),
+    retentionDays: z.coerce.number().int().min(1).max(3650),
+    approvedCidrs: z
+      .array(
+        z
+          .string()
+          .refine(isPrivateCidr, "Only private IPv4 ranges are allowed."),
+      )
+      .min(1)
+      .max(16),
+    discoveryMethod: z.enum(["passive", "ping"]),
+    density: z.enum(["comfortable", "compact"]),
+    maintenanceWindows: z.array(maintenanceWindowSchema).max(24).default([]),
+  })
+  .superRefine((settings, context) => {
+    const ids = settings.maintenanceWindows.map((window) => window.id);
+    if (new Set(ids).size !== ids.length)
+      context.addIssue({
+        code: "custom",
+        path: ["maintenanceWindows"],
+        message: "Maintenance window identifiers must be unique.",
+      });
+    const chronological = settings.maintenanceWindows.toSorted((left, right) =>
+      left.startsAt.localeCompare(right.startsAt),
+    );
+    for (let index = 1; index < chronological.length; index += 1) {
+      const previous = chronological[index - 1];
+      const current = chronological[index];
+      if (
+        previous &&
+        current &&
+        Date.parse(current.startsAt) < Date.parse(previous.endsAt)
+      ) {
+        context.addIssue({
+          code: "custom",
+          path: ["maintenanceWindows"],
+          message: "Maintenance windows cannot overlap.",
+        });
+        break;
+      }
+    }
+  });
 
 export const mutationSchema = z.discriminatedUnion("action", [
   z.object({ action: z.literal("add-device"), data: deviceInputSchema }),
