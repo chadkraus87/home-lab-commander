@@ -7,12 +7,14 @@ import {
   AlertTriangle,
   CheckCircle2,
   CheckCheck,
+  HardHat,
   ExternalLink,
   Info,
   Search,
   ShieldAlert,
 } from "lucide-react";
 import { useApp } from "@/components/app-provider";
+import { getActiveMaintenanceWindow } from "@/domain/maintenance";
 import {
   Badge,
   Button,
@@ -21,7 +23,7 @@ import {
   SegmentedControl,
   StatusBadge,
 } from "@/components/ui";
-import { formatRelativeTime, titleCase } from "@/lib/utils";
+import { formatFutureTime, formatRelativeTime, titleCase } from "@/lib/utils";
 
 type AlertFilter = "active" | "acknowledged" | "resolved" | "all";
 export function AlertsPage() {
@@ -29,6 +31,10 @@ export function AlertsPage() {
   const [filter, setFilter] = useState<AlertFilter>("active");
   const [severity, setSeverity] = useState("all");
   const [query, setQuery] = useState("");
+  const activeMaintenance = getActiveMaintenanceWindow(
+    snapshot.settings.maintenanceWindows,
+    new Date(snapshot.generatedAt),
+  );
   const alerts = useMemo(
     () =>
       snapshot.alerts.filter(
@@ -67,6 +73,20 @@ export function AlertsPage() {
           </Badge>
         }
       />
+      {activeMaintenance ? (
+        <div className="maintenance-banner" role="status">
+          <HardHat size={17} />
+          <div>
+            <strong>{activeMaintenance.name} is in progress</strong>
+            <p>
+              Alerts continue to be recorded, but new outbound notifications are
+              suppressed until the window ends{" "}
+              {formatFutureTime(activeMaintenance.endsAt)}.
+            </p>
+          </div>
+          <Link href="/settings?section=monitoring">Manage window</Link>
+        </div>
+      ) : null}
       <section className="alert-summary">
         <AlertSummary
           severity="critical"

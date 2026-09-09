@@ -29,6 +29,16 @@ export function formatRelativeTime(value: string): string {
   return `${Math.floor(hours / 24)}d ago`;
 }
 
+export function formatFutureTime(value: string): string {
+  const remaining = Math.max(0, Date.parse(value) - Date.now());
+  const minutes = Math.ceil(remaining / 60_000);
+  if (minutes <= 1) return "in under a minute";
+  if (minutes < 60) return `in ${minutes}m`;
+  const hours = Math.ceil(minutes / 60);
+  if (hours < 24) return `in ${hours}h`;
+  return `in ${Math.ceil(hours / 24)}d`;
+}
+
 export function titleCase(value: string): string {
   return value
     .replaceAll("-", " ")

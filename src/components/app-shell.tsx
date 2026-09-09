@@ -19,6 +19,7 @@ import {
   Command as CommandIcon,
   FileText,
   Gauge,
+  HardHat,
   LayoutDashboard,
   Menu,
   Monitor,
@@ -34,6 +35,7 @@ import {
 } from "lucide-react";
 import { useTheme } from "next-themes";
 import { calculateHealthScore } from "@/domain/health";
+import { getActiveMaintenanceWindow } from "@/domain/maintenance";
 import { useApp } from "@/components/app-provider";
 import { CommandPalette } from "@/components/command-palette";
 import { HostedDemoExperience } from "@/components/hosted-demo-experience";
@@ -84,6 +86,10 @@ export function AppShell({ children }: { children: ReactNode }) {
   const activeAlerts = snapshot.alerts.filter(
     (alert) => alert.status === "active",
   ).length;
+  const activeMaintenance = getActiveMaintenanceWindow(
+    snapshot.settings.maintenanceWindows,
+    new Date(snapshot.generatedAt),
+  );
 
   useEffect(() => {
     const handler = (event: KeyboardEvent) => {
@@ -231,6 +237,16 @@ export function AppShell({ children }: { children: ReactNode }) {
               <span>Search infrastructure</span>
               <kbd>⌘ K</kbd>
             </button>
+            {activeMaintenance ? (
+              <Link
+                className="maintenance-chip"
+                href="/settings?section=monitoring"
+                title={`${activeMaintenance.name} ends ${activeMaintenance.endsAt}`}
+              >
+                <HardHat size={14} />
+                <span>Maintenance active</span>
+              </Link>
+            ) : null}
             <div className="health-chip">
               <span
                 className={cn("health-dot", health.score < 70 && "attention")}

@@ -84,6 +84,7 @@ export function createDemoSnapshot(now = new Date()): AppSnapshot {
       approvedCidrs: ["192.168.10.0/24", "192.168.20.0/24"],
       discoveryMethod: "passive",
       density: "comfortable",
+      maintenanceWindows: [],
     },
     generatedAt: isoNow,
   };

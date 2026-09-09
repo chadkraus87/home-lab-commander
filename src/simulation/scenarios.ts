@@ -3,6 +3,7 @@ import type { AlertRecord, AppSnapshot, EventRecord } from "@/domain/types";
 export const demoScenarioIds = [
   "balanced",
   "capacity",
+  "maintenance",
   "outage",
   "recovery",
 ] as const;
@@ -11,6 +12,8 @@ export type DemoScenarioId = (typeof demoScenarioIds)[number];
 export const demoScenarioDescriptions: Record<DemoScenarioId, string> = {
   balanced: "The default mixed-health lab with two active warnings.",
   capacity: "Storage and memory pressure build before an outage occurs.",
+  maintenance:
+    "Planned NAS work suppresses outbound notifications while alerts remain visible.",
   outage: "DNS and automation services fail during a simulated incident.",
   recovery: "Services recover and the incident timeline records the response.",
 };
@@ -63,6 +66,37 @@ export function applyDemoScenario(
           "capacity",
           "warning",
           "Capacity scenario loaded: NAS storage pressure is increasing",
+          "nas",
+          now,
+        ),
+        ...clean.events,
+      ],
+    };
+  }
+
+  if (scenario === "maintenance") {
+    const current = Date.parse(now);
+    const startsAt = new Date(current - 15 * 60_000).toISOString();
+    const endsAt = new Date(current + 45 * 60_000).toISOString();
+    return {
+      ...clean,
+      settings: {
+        ...clean.settings,
+        maintenanceWindows: [
+          {
+            id: "demo-maintenance-nas",
+            name: "Archive NAS drive replacement",
+            startsAt,
+            endsAt,
+            createdAt: startsAt,
+          },
+        ],
+      },
+      events: [
+        scenarioEvent(
+          "maintenance",
+          "info",
+          "Maintenance window active: outbound notifications are suppressed while alerts remain visible",
           "nas",
           now,
         ),

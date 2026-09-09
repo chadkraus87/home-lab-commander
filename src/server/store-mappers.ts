@@ -17,6 +17,7 @@ import type {
   NetworkInterface,
   NetworkRecord,
 } from "@/domain/types";
+import { settingsInputSchema } from "@/domain/schemas";
 import { createDemoSnapshot } from "@/simulation/demo-data";
 
 type SqlRow = Record<string, SQLOutputValue>;
@@ -99,14 +100,17 @@ export function readSnapshot(database: DatabaseSync): AppSnapshot {
 }
 
 function readSettings(database: DatabaseSync): AppSettings {
+  const fallback = createDemoSnapshot().settings;
   const row = database
     .prepare(
       "SELECT value_json FROM application_settings WHERE key = 'settings'",
     )
     .get() as SqlRow | undefined;
-  return row
-    ? parseJson<AppSettings>(row.value_json, createDemoSnapshot().settings)
-    : createDemoSnapshot().settings;
+  if (!row) return fallback;
+  const parsed = settingsInputSchema.safeParse(
+    parseJson<unknown>(row.value_json, null),
+  );
+  return parsed.success ? parsed.data : fallback;
 }
 
 function mapDevice(
