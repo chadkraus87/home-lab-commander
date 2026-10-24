@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import AxeBuilder from "@axe-core/playwright";
+import { collectAccessibilityFindings, primaryRoutes } from "./accessibility";
 import { enableBrowserGuards } from "./browser-guards";
 
 enableBrowserGuards();
@@ -7,7 +7,13 @@ enableBrowserGuards();
 test.beforeEach(async ({ page }) => {
   await page.goto("/");
   await page.request.post("/api/state", { data: { action: "reset-demo" } });
-  await page.reload();
+  try {
+    await page.reload({ waitUntil: "domcontentloaded" });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    if (!message.includes("net::ERR_ABORTED")) throw error;
+  }
+  await expect(page.locator("main")).toBeVisible();
 });
 
 test("fresh application opens a populated Demo dashboard", async ({ page }) => {
@@ -185,11 +191,10 @@ test("mobile navigation remains usable", async ({ page }) => {
   await expect(page.getByRole("heading", { name: "Devices" })).toBeVisible();
 });
 
-test("overview has no serious accessibility violations", async ({ page }) => {
-  const results = await new AxeBuilder({ page }).analyze();
-  expect(
-    results.violations.filter((violation) =>
-      ["serious", "critical"].includes(violation.impact ?? ""),
-    ),
-  ).toEqual([]);
+test("all local routes meet automated WCAG A and AA rules", async ({
+  page,
+}) => {
+  test.setTimeout(60_000);
+  const findings = await collectAccessibilityFindings(page, primaryRoutes);
+  expect(findings).toEqual([]);
 });

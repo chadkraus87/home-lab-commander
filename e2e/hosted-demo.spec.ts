@@ -1,5 +1,5 @@
-import AxeBuilder from "@axe-core/playwright";
 import { expect, test } from "@playwright/test";
+import { collectAccessibilityFindings, primaryRoutes } from "./accessibility";
 import { enableBrowserGuards } from "./browser-guards";
 
 enableBrowserGuards();
@@ -49,16 +49,15 @@ test("hosted showcase blocks every local operator boundary", async ({
   for (const response of calls) expect(response.status()).toBe(403);
 });
 
-test("hosted overview has no serious accessibility violations", async ({
+test("all hosted routes meet automated WCAG A and AA rules", async ({
   page,
 }) => {
-  await page.goto("/?scenario=balanced");
-  const results = await new AxeBuilder({ page }).analyze();
-  expect(
-    results.violations.filter((violation) =>
-      ["serious", "critical"].includes(violation.impact ?? ""),
-    ),
-  ).toEqual([]);
+  test.setTimeout(60_000);
+  const hostedRoutes = primaryRoutes.map(
+    (route) => `${route}${route.includes("?") ? "&" : "?"}scenario=balanced`,
+  );
+  const findings = await collectAccessibilityFindings(page, hostedRoutes);
+  expect(findings).toEqual([]);
 });
 
 test("hosted maintenance scenario explains notification suppression", async ({

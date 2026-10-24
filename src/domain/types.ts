@@ -238,6 +238,7 @@ export interface DiscoveryResult {
 
 export interface HealthScore {
   score: number;
-  label: "Excellent" | "Good" | "Attention needed" | "Critical";
+  label: "No data" | "Excellent" | "Good" | "Attention needed" | "Critical";
+  observed: boolean;
   factors: Array<{ label: string; impact: number; detail: string }>;
 }

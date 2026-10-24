@@ -72,6 +72,7 @@ export function ActivityPage() {
             />
           </div>
           <select
+            aria-label="Filter activity by device"
             value={device}
             onChange={(event) => setDevice(event.target.value)}
           >
@@ -83,6 +84,7 @@ export function ActivityPage() {
             ))}
           </select>
           <select
+            aria-label="Filter activity by severity"
             value={severity}
             onChange={(event) => setSeverity(event.target.value)}
           >
@@ -92,6 +94,7 @@ export function ActivityPage() {
             <option value="info">Info</option>
           </select>
           <select
+            aria-label="Filter activity by source"
             value={source}
             onChange={(event) => setSource(event.target.value)}
           >
@@ -103,6 +106,7 @@ export function ActivityPage() {
             )}
           </select>
           <select
+            aria-label="Filter activity by time range"
             value={range}
             onChange={(event) => setRange(event.target.value)}
           >

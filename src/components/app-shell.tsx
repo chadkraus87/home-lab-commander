@@ -247,12 +247,24 @@ export function AppShell({ children }: { children: ReactNode }) {
                 <span>Maintenance active</span>
               </Link>
             ) : null}
-            <div className="health-chip">
+            <div
+              className="health-chip"
+              aria-label={
+                health.observed
+                  ? `Health score ${health.score} out of 100`
+                  : "Health score unavailable until telemetry is observed"
+              }
+            >
               <span
-                className={cn("health-dot", health.score < 70 && "attention")}
+                className={cn(
+                  "health-dot",
+                  !health.observed
+                    ? "unknown"
+                    : health.score < 70 && "attention",
+                )}
               />
               <span>Health</span>
-              <strong>{health.score}</strong>
+              <strong>{health.observed ? health.score : "—"}</strong>
             </div>
             <Button
               variant="ghost"

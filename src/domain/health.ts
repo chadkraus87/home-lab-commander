@@ -22,6 +22,11 @@ export function calculateHealthScore(
   const activeAlerts = snapshot.alerts.filter(
     (alert) => alert.status === "active",
   );
+  const observed =
+    snapshot.devices.length > 0 ||
+    snapshot.services.length > 0 ||
+    snapshot.containers.length > 0 ||
+    activeAlerts.length > 0;
   const criticalAlerts = activeAlerts.filter(
     (alert) => alert.severity === "critical",
   ).length;
@@ -35,24 +40,31 @@ export function calculateHealthScore(
     label: "Devices",
     impact: -deviceImpact,
     detail:
-      offlineDevices || degradedDevices
-        ? `${offlineDevices} offline · ${degradedDevices} degraded`
-        : "All managed devices are responding",
+      snapshot.devices.length === 0
+        ? "No devices configured"
+        : offlineDevices || degradedDevices
+          ? `${offlineDevices} offline · ${degradedDevices} degraded`
+          : "All managed devices are responding",
   });
   factors.push({
     label: "Services",
     impact: -serviceImpact,
     detail:
-      downServices || degradedServices
-        ? `${downServices} down · ${degradedServices} degraded`
-        : "All monitored services are healthy",
+      snapshot.services.length === 0
+        ? "No services configured"
+        : downServices || degradedServices
+          ? `${downServices} down · ${degradedServices} degraded`
+          : "All monitored services are healthy",
   });
   factors.push({
     label: "Containers",
     impact: -containerImpact,
-    detail: unhealthyContainers
-      ? `${unhealthyContainers} container${unhealthyContainers === 1 ? "" : "s"} unhealthy`
-      : "Container workloads are stable",
+    detail:
+      snapshot.containers.length === 0
+        ? "No containers observed"
+        : unhealthyContainers
+          ? `${unhealthyContainers} container${unhealthyContainers === 1 ? "" : "s"} unhealthy`
+          : "Container workloads are stable",
   });
   factors.push({
     label: "Active alerts",
@@ -67,15 +79,17 @@ export function calculateHealthScore(
     ),
   );
   return {
-    score,
-    label:
-      score >= 90
+    score: observed ? score : 0,
+    label: !observed
+      ? "No data"
+      : score >= 90
         ? "Excellent"
         : score >= 75
           ? "Good"
           : score >= 50
             ? "Attention needed"
             : "Critical",
+    observed,
     factors,
   };
 }
