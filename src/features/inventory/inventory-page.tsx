@@ -137,6 +137,7 @@ export function InventoryPage() {
               />
             </div>
             <select
+              aria-label="Filter inventory by status"
               value={status}
               onChange={(event) => setStatus(event.target.value)}
             >

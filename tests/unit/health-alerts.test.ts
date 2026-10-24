@@ -7,11 +7,30 @@ describe("health and alert rules", () => {
   it("calculates an explainable bounded health score", () => {
     const snapshot = createDemoSnapshot(new Date("2026-08-20T12:00:00Z"));
     const result = calculateHealthScore(snapshot);
+    expect(result.observed).toBe(true);
     expect(result.score).toBeGreaterThanOrEqual(0);
     expect(result.score).toBeLessThanOrEqual(100);
     expect(result.factors).toHaveLength(4);
     expect(result.factors.some((factor) => factor.label === "Services")).toBe(
       true,
+    );
+  });
+
+  it("does not report perfect health before telemetry exists", () => {
+    const result = calculateHealthScore({
+      devices: [],
+      services: [],
+      containers: [],
+      alerts: [],
+    });
+
+    expect(result).toMatchObject({
+      observed: false,
+      score: 0,
+      label: "No data",
+    });
+    expect(result.factors.map((factor) => factor.detail)).toContain(
+      "No devices configured",
     );
   });
 

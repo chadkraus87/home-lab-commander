@@ -241,7 +241,7 @@ Install Playwright Chromium once if necessary:
 npx playwright install chromium
 ```
 
-The suite covers private-address enforcement, CIDR validation, hosted-deployment fail-closed behavior, health scoring, alert rules, maintenance-window validation and suppression history, deterministic simulation and scenarios, discovery reconciliation, provider configuration, metric downsampling, SQLite workflows, component interaction, WCAG Axe checks, and complete local/hosted browser journeys. Browser tests fail on console errors, uncaught page errors, or failed page responses. GitHub Actions runs static, unit/integration, production-build, performance-budget, browser, CodeQL, full dependency-audit, and container-vulnerability checks. Version tags publish an attested GHCR image with provenance and SBOM metadata.
+The suite covers private-address enforcement, CIDR validation, hosted-deployment fail-closed behavior, health scoring, alert rules, maintenance-window validation and suppression history, deterministic simulation and scenarios, discovery reconciliation, provider configuration, metric downsampling, SQLite workflows, component interaction, automated WCAG A/AA checks across all 14 primary routes, and complete local/hosted browser journeys. Browser tests build the production application and fail on accessibility violations, console errors, uncaught page errors, or failed page responses. GitHub Actions runs static, unit/integration, production-build, performance-budget, browser, CodeQL, full dependency-audit, and container-vulnerability checks. Version tags publish an attested GHCR image with provenance and SBOM metadata.
 
 ## Deploy your own hosted showcase
 

@@ -20,10 +20,11 @@ export default defineConfig({
     ? {}
     : {
         webServer: {
-          command: "HOMELAB_HOSTED_DEMO=1 npm run dev -- --port 3200",
+          command:
+            "npm run build && HOMELAB_HOSTED_DEMO=1 npm run start -- --port 3200",
           url: "http://127.0.0.1:3200/api/health",
           reuseExistingServer: false,
-          timeout: 120_000,
+          timeout: 180_000,
         },
       }),
   projects: [

@@ -51,6 +51,7 @@ const nodeTypes = { device: DeviceNode };
 
 export function NetworkPage() {
   const { snapshot } = useApp();
+  const liveMode = !snapshot.hostedDemo && snapshot.settings.mode === "live";
   const [filter, setFilter] = useState<
     "all" | "network" | "compute" | "wireless"
   >("all");
@@ -128,7 +129,11 @@ export function NetworkPage() {
       <PageHeader
         eyebrow="Visual operations"
         title="Network topology"
-        description="Interactive view of meaningful links across the simulated lab."
+        description={
+          liveMode
+            ? "Interactive view of observed links across approved local infrastructure."
+            : "Interactive view of meaningful links across the simulated lab."
+        }
         actions={
           <>
             <Button variant="secondary" onClick={autoLayout}>
@@ -181,7 +186,6 @@ export function NetworkPage() {
             fitView
             minZoom={0.35}
             maxZoom={1.8}
-            proOptions={{ hideAttribution: true }}
           >
             <Background color="var(--border)" gap={24} size={1} />
             <Controls showInteractive={false} />
@@ -253,7 +257,11 @@ function DeviceNode({ data, selected }: NodeProps<TopologyNode>) {
         <strong>{data.label}</strong>
         <small>{data.ip}</small>
       </div>
-      <span className="node-status" aria-label={data.status} />
+      <span
+        className="node-status"
+        role="img"
+        aria-label={`${data.status} status`}
+      />
       <Handle type="source" position={Position.Bottom} />
     </div>
   );

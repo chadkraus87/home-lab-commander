@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 import { AppProvider } from "@/components/app-provider";
 import { StatusBadge } from "@/components/ui";
 import { DevicesPage } from "@/features/devices/devices-page";
+import { OverviewPage } from "@/features/overview/overview-page";
 import { createDemoSnapshot } from "@/simulation/demo-data";
 
 describe("meaningful UI interactions", () => {
@@ -26,5 +27,34 @@ describe("meaningful UI interactions", () => {
     expect(screen.queryByText("Archive NAS")).not.toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Cards" }));
     expect(screen.getByTestId("device-card")).toBeVisible();
+  });
+
+  it("labels live mode and derives empty-state telemetry from the snapshot", () => {
+    const snapshot = createDemoSnapshot(new Date("2026-08-20T12:00:00Z"));
+    render(
+      <AppProvider
+        initialSnapshot={{
+          ...snapshot,
+          devices: [],
+          services: [],
+          containers: [],
+          connections: [],
+          alerts: [],
+          settings: { ...snapshot.settings, mode: "live" },
+        }}
+      >
+        <OverviewPage />
+      </AppProvider>,
+    );
+
+    expect(screen.getByText("Live Environment Active")).toBeVisible();
+    expect(
+      screen.queryByText("Demo Environment Active"),
+    ).not.toBeInTheDocument();
+    expect(screen.getAllByText("No devices configured")).not.toHaveLength(0);
+    expect(screen.getAllByText("No services configured")).not.toHaveLength(0);
+    expect(screen.getByText("No recorded restarts")).toBeVisible();
+    expect(screen.getByText("No data")).toBeVisible();
+    expect(screen.getByText("awaiting data")).toBeVisible();
   });
 });

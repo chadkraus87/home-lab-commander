@@ -41,6 +41,7 @@ import { formatPercent, formatRelativeTime } from "@/lib/utils";
 
 export function OverviewPage() {
   const { snapshot } = useApp();
+  const liveMode = !snapshot.hostedDemo && snapshot.settings.mode === "live";
   const health = calculateHealthScore(snapshot);
   const online = snapshot.devices.filter(
     (device) => device.status === "healthy",
@@ -71,6 +72,40 @@ export function OverviewPage() {
     (sum, device) => sum + device.metrics.networkRx + device.metrics.networkTx,
     0,
   );
+  const serviceAvailability = average(
+    snapshot.services.map((service) => service.uptimePercent),
+  );
+  const recordedRestarts = snapshot.containers.reduce(
+    (sum, container) => sum + container.restartCount,
+    0,
+  );
+  const approvedNetworks = snapshot.networks.filter(
+    (network) => network.approved,
+  );
+  const primaryNetwork = approvedNetworks[0] ?? snapshot.networks[0] ?? null;
+  const gatewayDevice = primaryNetwork
+    ? snapshot.devices.find(
+        (device) => device.primaryIp === primaryNetwork.gateway,
+      )
+    : snapshot.devices.find((device) => device.type === "router");
+  const dnsService = snapshot.services.find(
+    (service) =>
+      service.protocol === "dns" || service.type.toLowerCase().includes("dns"),
+  );
+  const healthyConnections = snapshot.connections.filter(
+    (connection) => connection.status === "healthy",
+  ).length;
+  const connectionStatus = snapshot.connections.some(
+    (connection) => connection.status === "offline",
+  )
+    ? "offline"
+    : snapshot.connections.some(
+          (connection) => connection.status === "degraded",
+        )
+      ? "degraded"
+      : snapshot.connections.length > 0
+        ? "healthy"
+        : "unknown";
   const history =
     snapshot.devices[0]?.metricHistory.map((point, index) => ({
       timestamp: new Date(point.timestamp).toLocaleTimeString([], {
@@ -93,21 +128,29 @@ export function OverviewPage() {
     <>
       <PageHeader
         eyebrow={
-          snapshot.hostedDemo ? "Hosted product showcase" : "Live command view"
+          snapshot.hostedDemo
+            ? "Hosted product showcase"
+            : liveMode
+              ? "Live command view"
+              : "Demo command view"
         }
         title="Infrastructure overview"
         description={
           snapshot.hostedDemo
             ? "Explore a fully interactive simulated homelab. Showcase changes are temporary and reset automatically."
-            : "Current health, capacity, and activity across your simulated homelab."
+            : liveMode
+              ? "Current health, capacity, and activity across your approved local infrastructure."
+              : "Current health, capacity, and activity across your local demo data."
         }
         actions={
           <>
-            <Badge tone="info">
+            <Badge tone={liveMode ? "positive" : "info"}>
               <Radio size={12} />
               {snapshot.hostedDemo
                 ? "Hosted Demo · Auto-reset"
-                : "Demo Environment Active"}
+                : liveMode
+                  ? "Live Environment Active"
+                  : "Demo Environment Active"}
             </Badge>
             {snapshot.hostedDemo ? (
               <Link
@@ -115,6 +158,14 @@ export function OverviewPage() {
                 href="/settings?section=live"
               >
                 How this demo works
+                <ArrowRight size={14} />
+              </Link>
+            ) : liveMode ? (
+              <Link
+                className="button button-secondary button-default"
+                href="/settings?section=live"
+              >
+                Review live settings
                 <ArrowRight size={14} />
               </Link>
             ) : (
@@ -136,7 +187,13 @@ export function OverviewPage() {
           detail={`${online} online · ${degraded} degraded`}
           icon={<Server />}
           tone="blue"
-          trend="All collectors reporting"
+          trend={
+            snapshot.devices.length === 0
+              ? "No devices configured"
+              : offline > 0
+                ? `${offline} offline`
+                : "All collectors reporting"
+          }
         />
         <SummaryCard
           label="Healthy services"
@@ -144,7 +201,11 @@ export function OverviewPage() {
           detail={`${snapshot.services.filter((item) => item.status === "degraded").length} degraded`}
           icon={<Wifi />}
           tone="green"
-          trend="99.94% availability"
+          trend={
+            snapshot.services.length === 0
+              ? "No services configured"
+              : `${serviceAvailability.toFixed(2)}% availability`
+          }
         />
         <SummaryCard
           label="Running containers"
@@ -152,7 +213,11 @@ export function OverviewPage() {
           detail={`${snapshot.containers.filter((item) => item.state === "unhealthy").length} unhealthy`}
           icon={<Box />}
           tone="purple"
-          trend="2 restarts today"
+          trend={
+            recordedRestarts === 0
+              ? "No recorded restarts"
+              : `${recordedRestarts} recorded restart${recordedRestarts === 1 ? "" : "s"}`
+          }
         />
         <SummaryCard
           label="Active alerts"
@@ -172,7 +237,15 @@ export function OverviewPage() {
               <h2>Infrastructure health score</h2>
               <p>Weighted by availability, alerts, and workload state</p>
             </div>
-            <Badge tone={health.score >= 85 ? "positive" : "warning"}>
+            <Badge
+              tone={
+                !health.observed
+                  ? "neutral"
+                  : health.score >= 85
+                    ? "positive"
+                    : "warning"
+              }
+            >
               {health.label}
             </Badge>
           </div>
@@ -184,15 +257,17 @@ export function OverviewPage() {
               }
             >
               <div>
-                <strong>{health.score}</strong>
-                <span>/ 100</span>
+                <strong>{health.observed ? health.score : "—"}</strong>
+                <span>{health.observed ? "/ 100" : "awaiting data"}</span>
               </div>
             </div>
             <div className="factor-list">
               {health.factors.map((factor) => (
                 <div className="factor-row" key={factor.label}>
                   <span>
-                    {factor.impact === 0 ? (
+                    {!health.observed ? (
+                      <CircleOff size={14} />
+                    ) : factor.impact === 0 ? (
                       <CheckCircle2 size={14} />
                     ) : (
                       <TriangleAlert size={14} />
@@ -295,19 +370,25 @@ export function OverviewPage() {
           icon={<Cpu />}
           label="Average CPU"
           value={avgCpu}
-          detail="Across 9 devices"
+          detail={deviceTelemetryDetail(snapshot.devices.length)}
         />
         <ResourceMeter
           icon={<MemoryStick />}
           label="Average memory"
           value={avgMemory}
-          detail="25.8 GB allocated"
+          detail={deviceTelemetryDetail(snapshot.devices.length)}
         />
         <ResourceMeter
           icon={<Gauge />}
           label="Storage used"
           value={avgDisk}
-          detail="NAS requires attention"
+          detail={
+            snapshot.devices.length === 0
+              ? "No device telemetry"
+              : avgDisk > 70
+                ? "Attention recommended"
+                : "Environment average"
+          }
           warning={avgDisk > 70}
         />
         <ResourceMeter
@@ -333,30 +414,42 @@ export function OverviewPage() {
             <NetworkCheck
               icon={<Network />}
               label="Gateway"
-              detail="192.168.10.1"
-              value="0.8 ms"
-              status="healthy"
-            />
-            <NetworkCheck
-              icon={<Wifi />}
-              label="Internet"
-              detail="WAN uplink"
-              value="Online"
-              status="healthy"
+              detail={primaryNetwork?.gateway ?? "Not configured"}
+              value={
+                gatewayDevice
+                  ? `${gatewayDevice.latencyMs.toFixed(1)} ms`
+                  : "Not observed"
+              }
+              status={gatewayDevice?.status ?? "unknown"}
             />
             <NetworkCheck
               icon={<ShieldCheck />}
+              label="Approved networks"
+              detail="Discovery allowlist"
+              value={String(approvedNetworks.length)}
+              status={approvedNetworks.length > 0 ? "healthy" : "unknown"}
+            />
+            <NetworkCheck
+              icon={<Wifi />}
               label="DNS"
-              detail="Pi-hole + Unbound"
-              value="5 ms"
-              status="healthy"
+              detail={dnsService?.name ?? "No monitor configured"}
+              value={
+                dnsService
+                  ? `${dnsService.responseTimeMs.toFixed(0)} ms`
+                  : "Not monitored"
+              }
+              status={dnsService?.status ?? "unknown"}
             />
             <NetworkCheck
               icon={<Activity />}
-              label="Packet loss"
-              detail="Last 15 minutes"
-              value="0.0%"
-              status="healthy"
+              label="Link health"
+              detail={`${snapshot.connections.length} monitored link${snapshot.connections.length === 1 ? "" : "s"}`}
+              value={
+                snapshot.connections.length > 0
+                  ? `${healthyConnections}/${snapshot.connections.length} healthy`
+                  : "Not observed"
+              }
+              status={connectionStatus}
             />
           </div>
         </Card>
@@ -550,4 +643,9 @@ function NetworkCheck({
       <StatusBadge status={status} />
     </div>
   );
+}
+
+function deviceTelemetryDetail(deviceCount: number): string {
+  if (deviceCount === 0) return "No device telemetry";
+  return `Across ${deviceCount} device${deviceCount === 1 ? "" : "s"}`;
 }
