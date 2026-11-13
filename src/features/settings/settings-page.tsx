@@ -1317,7 +1317,7 @@ function AboutSettings() {
         <div>
           <h2>HomeLab Commander</h2>
           <p>Your infrastructure. One command center.</p>
-          <Badge tone="info">Version 0.1.0</Badge>
+          <Badge tone="info">Version 1.0.0</Badge>
         </div>
       </div>
       <dl className="detail-list">
